@@ -75,12 +75,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-primary via-dark-secondary to-dark-tertiary flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-[#090909] flex items-center justify-center px-6 py-10 relative overflow-hidden">
       {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10" />
-      </div>
+<div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="absolute -top-32 right-[-120px] w-[450px] h-[450px] rounded-full bg-violet-500/10 blur-[120px]" />
+
+    <div className="absolute bottom-[-120px] left-[-80px] w-[350px] h-[350px] rounded-full bg-violet-500/5 blur-[120px]" />
+</div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -88,21 +89,37 @@ export default function LoginPage() {
         transition={{ duration: 0.6 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="glass p-8 md:p-10">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 mb-4 glass">
-                          <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
-  <Wallet className="w-7 h-7 text-accent" />
+       <div
+className="
+bg-white/[0.04]
+border
+border-white/10
+rounded-3xl
+backdrop-blur-xl
+shadow-2xl
+p-10
+">
+<div className="text-center mb-10">
+
+    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-violet-500/10 border border-violet-500/20">
+
+        <Wallet
+            className="text-violet-400"
+            size={40}
+            strokeWidth={2.2}
+        />
+
+    </div>
+
+    <h1 className="text-4xl font-bold text-white tracking-tight">
+        CashFlow
+    </h1>
+
+    <p className="mt-2 text-sm text-white/45 tracking-[0.25em] uppercase">
+        XI TKJ A
+    </p>
+
 </div>
-            </div>
-            <h1 className="text-3xl font-display font-bold text-white mb-2">
-              CashFlow Login
-            </h1>
-            <p className="text-sm text-white/60">
-              XI TKJ A Management System
-            </p>
-          </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             {/* Student Selector */}
@@ -206,7 +223,19 @@ export default function LoginPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
-              className="w-full py-3 bg-gradient-to-r from-accent to-accent-light text-dark-primary font-display font-bold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="
+w-full
+rounded-xl
+bg-violet-500
+py-3.5
+font-semibold
+text-white
+transition-all
+hover:bg-violet-400
+hover:shadow-lg
+hover:shadow-violet-500/20
+disabled:opacity-50
+"
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </motion.button>

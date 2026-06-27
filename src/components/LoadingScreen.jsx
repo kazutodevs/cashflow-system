@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Wallet2 } from 'lucide-react'  
 
 export default function LoadingScreen() {
   const containerVariants = {
@@ -34,67 +35,161 @@ export default function LoadingScreen() {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-dark-primary via-dark-secondary to-dark-primary overflow-hidden">
-      {/* Animated background gradient */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-8 right-1/4 w-96 h-96 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-      </div>
+  <div
+    className="fixed inset-0 flex items-center justify-center overflow-hidden"
+    style={{
+      background: "#0a0a0a",
+    }}
+  >
+    {/* Background Glow */}
+    <div
+      style={{
+        position: "absolute",
+        width: 500,
+        height: 500,
+        borderRadius: "50%",
+        background:
+          "radial-gradient(circle, rgba(139,92,246,.12) 0%, transparent 70%)",
+        top: -150,
+        right: -150,
+        filter: "blur(20px)",
+      }}
+    />
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 text-center px-8"
-      >
-        {/* Main Title */}
-        <motion.div variants={itemVariants} className="mb-8">
-          <h1 className="text-5xl md:text-6xl font-display font-bold mb-2 bg-gradient-to-r from-accent via-orange-400 to-accent bg-clip-text text-transparent">
-            System Loading
-          </h1>
-          <p className="text-sm md:text-base text-white/60 font-light">
-            CashFlow TKJ A by Nopal
-          </p>
-        </motion.div>
+    <div
+      style={{
+        position: "absolute",
+        width: 350,
+        height: 350,
+        borderRadius: "50%",
+        background:
+          "radial-gradient(circle, rgba(139,92,246,.08) 0%, transparent 70%)",
+        bottom: -120,
+        left: -120,
+        filter: "blur(20px)",
+      }}
+    />
 
-        {/* Loading bars */}
-        <motion.div
-          variants={itemVariants}
-          className="flex justify-center items-end gap-1.5 h-12"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      style={{
+        width: 360,
+        padding: 40,
+        borderRadius: 20,
+        background: "rgba(255,255,255,.04)",
+        border: "1px solid rgba(255,255,255,.08)",
+        backdropFilter: "blur(20px)",
+        textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Top Accent */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 2,
+          background: "#8b5cf6",
+        }}
+      />
+
+      <motion.div variants={itemVariants}>
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            margin: "0 auto 24px",
+            borderRadius: 20,
+            background: "rgba(139,92,246,.12)",
+            border: "1px solid rgba(139,92,246,.2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 30,
+          }}
         >
-          {[0, 1, 2, 3, 4].map((i) => (
-            <motion.div
-              key={i}
-              variants={loaderVariants}
-              animate="animate"
-              transition={{ delay: i * 0.1 }}
-              className="w-1.5 bg-gradient-to-t from-accent to-accent-light rounded-full"
-              style={{ height: `${20 + i * 10}px` }}
-            />
-          ))}
-        </motion.div>
+          <Wallet2 size={36} className="text-accent" />
+        </div>
 
-        {/* Loading text */}
-        <motion.div
-          variants={itemVariants}
-          className="mt-8 text-white/50 text-sm font-light tracking-wider"
+        <h1
+          style={{
+            color: "#fff",
+            fontWeight: 800,
+            fontSize: 30,
+            marginBottom: 6,
+            letterSpacing: "-.5px",
+          }}
         >
-          <motion.p
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            Initializing...
-          </motion.p>
-        </motion.div>
+          CashFlow
+        </h1>
+
+        <p
+          style={{
+            color: "rgba(255,255,255,.5)",
+            fontSize: 13,
+            marginBottom: 30,
+          }}
+        >
+          TKJ A • XI • 2026/2027
+        </p>
       </motion.div>
 
-      {/* Glass effect border */}
+      {/* Loader */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.3 }}
-        className="absolute inset-0 pointer-events-none border border-accent/10 rounded-3xl m-auto max-w-2xl h-80"
-      />
-    </div>
-  )
+        variants={itemVariants}
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "flex-end",
+          gap: 6,
+          height: 40,
+        }}
+      >
+        {[0, 1, 2, 3, 4].map((i) => (
+          <motion.div
+            key={i}
+            animate={{
+              scaleY: [1, 1.6, 1],
+            }}
+            transition={{
+              duration: 0.9,
+              repeat: Infinity,
+              delay: i * 0.08,
+            }}
+            style={{
+              width: 5,
+              height: 12 + i * 5,
+              borderRadius: 999,
+              background: "#8b5cf6",
+            }}
+          />
+        ))}
+      </motion.div>
+
+      <motion.p
+        variants={itemVariants}
+        animate={{
+          opacity: [0.35, 1, 0.35],
+        }}
+        transition={{
+          duration: 1.2,
+          repeat: Infinity,
+        }}
+        style={{
+          marginTop: 28,
+          color: "rgba(255,255,255,.45)",
+          fontSize: 13,
+          letterSpacing: 1,
+        }}
+      >
+        Loading dashboard...
+      </motion.p>
+    </motion.div>
+  </div>
+)
 }
