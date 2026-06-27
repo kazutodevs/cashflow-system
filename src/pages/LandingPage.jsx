@@ -34,19 +34,7 @@ export default function LandingPage() {
   };
 
   return (
-<<<<<<< HEAD
-    <div className="relative w-full h-screen overflow-hidden bg-dark-primary">
-      {/* Background image with overlay */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: 'url(https://fxxjfkcjtuuxbrxhfrph.supabase.co/storage/v1/object/public/expense-proofs/IMG-20260421-WA0021.webp)',
-          filter: 'brightness(0.8) blur(1.5px)',
-        }}
-      />
-=======
     <div className="relative min-h-screen overflow-hidden bg-[#0A0712] text-white">
->>>>>>> 0a888cb (feat: search bar on payment manager)
 
       {/* ================= BACKGROUND ================= */}
 
@@ -488,10 +476,5 @@ export default function LandingPage() {
       </motion.p>
 
     </div>
-<<<<<<< HEAD
-  )
-}
-=======
   );
 }
->>>>>>> 0a888cb (feat: search bar on payment manager)
