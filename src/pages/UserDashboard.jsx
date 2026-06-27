@@ -451,6 +451,10 @@ export default function UserDashboard() {
   const [selectedExpense, setSelectedExpense] = useState(null)
   const [lastUpdated, setLastUpdated]         = useState(null)
   const [toast, setToast]                     = useState(null)
+  // Income table
+const [incomeSearch, setIncomeSearch] = useState("")
+const [incomeRowsPerPage, setIncomeRowsPerPage] = useState(10)
+const [incomePage, setIncomePage] = useState(1)
   const currentDate = new Date()
 
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
@@ -518,6 +522,31 @@ export default function UserDashboard() {
 
   const totalCash    = incomes.reduce((s, r) => s + (r.amount ?? 0), 0) - expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
   const totalIncome  = incomes.reduce((s, r) => s + (r.amount ?? 0), 0)
+  // ===============================
+// Income Filter + Pagination
+// ===============================
+const filteredIncome = incomes.filter((item) => {
+  const keyword = incomeSearch.toLowerCase()
+
+  return (
+    item.name?.toLowerCase().includes(keyword) ||
+    item.source?.toLowerCase().includes(keyword) ||
+    item.description?.toLowerCase().includes(keyword)
+  )
+})
+
+const totalIncomePages = Math.ceil(
+  filteredIncome.length / incomeRowsPerPage
+)
+
+const paginatedIncome = filteredIncome.slice(
+  (incomePage - 1) * incomeRowsPerPage,
+  incomePage * incomeRowsPerPage
+)
+
+useEffect(() => {
+  setIncomePage(1)
+}, [incomeSearch, incomeRowsPerPage])
   const totalExpense = expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
 
   const handleLogout = () => { logout(); navigate('/login') }
@@ -718,26 +747,198 @@ export default function UserDashboard() {
         {/* ── INCOME ── */}
         {activeTab === 'income' && (
           <motion.div variants={itemVariants}>
-            <div style={{ ...glass, padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text1, margin: 0 }}>Pemasukan</h2>
-                  <p style={{ fontSize: '12px', color: C.text3, margin: '4px 0 0' }}>
-                    {incomes.length} transaksi &bull; <span style={{ color: C.green, fontWeight: 700 }}>+Rp {totalIncome.toLocaleString('id-ID')}</span>
-                  </p>
-                </div>
-                <div style={{ padding: '10px', background: C.greenDim, borderRadius: '12px' }}>
-                  <ArrowUpCircle size={20} color={C.green} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '600px', overflowY: 'auto' }}>
-                {isLoading
-                  ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)
-                  : incomes.length > 0
-                    ? incomes.map(inc => <IncomeRow key={inc.id} income={inc} onClick={setSelectedIncome} />)
-                    : <EmptyState text="Belum ada data pemasukan." />}
-              </div>
-            </div>
+<div style={{ ...glass, padding: '20px' }}>
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '20px',
+      flexWrap: 'wrap',
+      gap: '12px'
+    }}
+  >
+    <div>
+      <h2
+        style={{
+          fontSize: '20px',
+          fontWeight: 900,
+          color: C.text1,
+          margin: 0
+        }}
+      >
+        Pemasukan
+      </h2>
+
+      <p
+        style={{
+          fontSize: '12px',
+          color: C.text3,
+          marginTop: '4px'
+        }}
+      >
+        {filteredIncome.length} transaksi •
+        <span
+          style={{
+            color: C.green,
+            fontWeight: 700,
+            marginLeft: 4
+          }}
+        >
+          +Rp {totalIncome.toLocaleString('id-ID')}
+        </span>
+      </p>
+    </div>
+
+    <div
+      style={{
+        padding: '10px',
+        background: C.greenDim,
+        borderRadius: '12px'
+      }}
+    >
+      <ArrowUpCircle size={20} color={C.green} />
+    </div>
+  </div>
+
+  {/* Toolbar */}
+  <div
+    style={{
+      display: 'flex',
+      gap: '10px',
+      marginBottom: '18px',
+      flexWrap: 'wrap'
+    }}
+  >
+    <input
+      placeholder="Cari pemasukan..."
+      value={incomeSearch}
+      onChange={(e) => setIncomeSearch(e.target.value)}
+      style={{
+        flex: 1,
+        minWidth: 220,
+        padding: '10px 14px',
+        borderRadius: '10px',
+        border: `1px solid ${C.border}`,
+        background: C.surface,
+        color: C.text1,
+        outline: 'none',
+        fontFamily: "'Inter', sans-serif"
+      }}
+    />
+
+    <select
+      value={incomeRowsPerPage}
+      onChange={(e) =>
+        setIncomeRowsPerPage(Number(e.target.value))
+      }
+      style={{
+        padding: '10px',
+        borderRadius: '10px',
+        border: `1px solid ${C.border}`,
+        background: C.surface,
+        color: C.text1,
+        fontFamily: "'Inter', sans-serif"
+      }}
+    >
+      <option value={10}>10</option>
+      <option value={25}>25</option>
+      <option value={50}>50</option>
+      <option value={100}>100</option>
+    </select>
+  </div>
+
+  {/* Table */}
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      maxHeight: '600px',
+      overflowY: 'auto'
+    }}
+  >
+    {isLoading ? (
+      Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} />
+      ))
+    ) : paginatedIncome.length > 0 ? (
+      paginatedIncome.map((income) => (
+        <IncomeRow
+          key={income.id}
+          income={income}
+          onClick={setSelectedIncome}
+        />
+      ))
+    ) : (
+      <EmptyState text="Data tidak ditemukan." />
+    )}
+  </div>
+
+  {/* Pagination */}
+  {!isLoading && totalIncomePages > 1 && (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: '20px'
+      }}
+    >
+      <button
+        disabled={incomePage === 1}
+        onClick={() => setIncomePage((p) => p - 1)}
+        style={{
+          padding: '10px 16px',
+          borderRadius: '10px',
+          border: `1px solid ${C.border}`,
+          background:
+            incomePage === 1 ? C.surface : C.greenDim,
+          color:
+            incomePage === 1 ? C.text3 : C.green,
+          cursor:
+            incomePage === 1 ? 'not-allowed' : 'pointer'
+        }}
+      >
+        Prev
+      </button>
+
+      <span
+        style={{
+          color: C.text2,
+          fontSize: '13px',
+          fontWeight: 600
+        }}
+      >
+        Halaman {incomePage} dari {totalIncomePages}
+      </span>
+
+      <button
+        disabled={incomePage === totalIncomePages}
+        onClick={() => setIncomePage((p) => p + 1)}
+        style={{
+          padding: '10px 16px',
+          borderRadius: '10px',
+          border: `1px solid ${C.border}`,
+          background:
+            incomePage === totalIncomePages
+              ? C.surface
+              : C.greenDim,
+          color:
+            incomePage === totalIncomePages
+              ? C.text3
+              : C.green,
+          cursor:
+            incomePage === totalIncomePages
+              ? 'not-allowed'
+              : 'pointer'
+        }}
+      >
+        Next
+      </button>
+    </div>
+  )}
+</div>
           </motion.div>
         )}
 
