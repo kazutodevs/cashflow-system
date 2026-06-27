@@ -1,6 +1,6 @@
-# 📊 CashFlow System - Complete Project Summary
+# CashFlow System - Complete Project Summary
 
-## 🎯 Project Overview
+## Project Overview
 
 **CashFlow System by Nopal** is a modern, lightweight class cash management web application built for X TKJ A class. It provides a sleek interface for tracking financial transactions, managing student payments, and maintaining transparent class finances.
 
