@@ -8,14 +8,16 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-export default function StudentPaymentManager() {
+export default function StudentPaymentManager({ onOpenMonthModal, onSelectionUpdate }) {
+  const currentDate = new Date()
   const [students, setStudents] = useState([])
-  const [selectedMonth, setSelectedMonth] = useState(1)
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [payments, setPayments] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [checkedStudents, setCheckedStudents] = useState(new Set())
   const [pendingChanges, setPendingChanges] = useState({})
   const [isSaving, setIsSaving] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetchPaymentData()
@@ -75,6 +77,22 @@ export default function StudentPaymentManager() {
     
     setCheckedStudents(newChecked)
   }
+
+  useEffect(() => {
+    if (typeof onSelectionUpdate !== 'function') return
+    const pendingValues = Object.values(pendingChanges)
+    const pendingPaid = pendingValues.filter((item) => item.willBePaid).length
+    const pendingUnpaid = pendingValues.filter((item) => !item.willBePaid).length
+
+    onSelectionUpdate({
+      selectedCount: checkedStudents.size,
+      pendingPaid,
+      pendingUnpaid,
+      isSaving,
+      saveChanges: handleSaveChanges,
+      cancelChanges: handleCancel,
+    })
+  }, [checkedStudents, pendingChanges, isSaving, onSelectionUpdate])
 
   // Save all changes to database
   const handleSaveChanges = async () => {
@@ -164,10 +182,14 @@ export default function StudentPaymentManager() {
     setPendingChanges({})
   }
 
+  const filteredStudents = students.filter((student) =>
+    student.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
-    <div className="glass p-6 rounded-2xl">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-display font-bold text-white">
+    <div className="glass p-4 sm:p-6 rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+        <h2 className="text-xl sm:text-2xl font-display font-bold text-white">
           Manage Student Payments
         </h2>
 
@@ -175,7 +197,7 @@ export default function StudentPaymentManager() {
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-          className="px-4 py-2 glass text-white focus:outline-none focus:ring-2 focus:ring-accent/50 rounded-lg"
+          className="px-3 py-2 sm:px-4 sm:py-2 glass text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-accent/50 rounded-lg"
         >
           {MONTHS.map((month, idx) => (
             <option key={month} value={idx + 1} className="bg-dark-primary">
@@ -183,6 +205,16 @@ export default function StudentPaymentManager() {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="mb-4 w-full max-w-md">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Cari nama student..."
+          className="w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent/50"
+        />
       </div>
 
       {isLoading ? (
@@ -193,7 +225,7 @@ export default function StudentPaymentManager() {
         </div>
       ) : (
         <div className={`space-y-3 ${checkedStudents.size > 0 ? 'pb-32' : ''}`}>
-          {students.map((student) => {
+          {filteredStudents.map((student) => {
             const payment = payments[student.id]
             const isPaid = payment?.paid || false
             const isChecked = checkedStudents.has(student.id)
@@ -203,7 +235,7 @@ export default function StudentPaymentManager() {
               <motion.div
                 key={student.id}
                 layout
-                className={`flex items-center justify-between p-4 rounded-lg transition-all cursor-pointer ${
+                className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 rounded-xl transition-all cursor-pointer ${
                   isChecked
                     ? 'bg-accent/20 border border-accent/50'
                     : 'bg-white/5 hover:bg-white/10'
@@ -212,7 +244,7 @@ export default function StudentPaymentManager() {
                   handleCheckboxChange(student.id, student.name, isPaid)
                 }
               >
-                <div className="flex items-center gap-4 flex-1">
+                <div className="flex items-start gap-3 flex-1 w-full">
                   {/* Checkbox */}
                   <motion.div
                     whileHover={{ scale: 1.1 }}
@@ -234,9 +266,9 @@ export default function StudentPaymentManager() {
                   </motion.div>
 
                   {/* Student info */}
-                  <div>
-                    <p className="text-white font-medium">{student.name}</p>
-                    <p className="text-xs text-white/50">
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base text-white font-medium truncate">{student.name}</p>
+                    <p className="text-[11px] sm:text-xs text-white/50 mt-0.5">
                       {hasPending ? (
                         <span className="text-accent">
                           {hasPending.willBePaid ? '→ Will change to: Bayar' : '→ Will change to: Belum Bayar'}
@@ -248,19 +280,37 @@ export default function StudentPaymentManager() {
                   </div>
                 </div>
 
-                {/* Current status badge */}
-                <div
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    isPaid
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-red-500/20 text-red-400'
-                  }`}
-                >
-                  {isPaid ? '✓ Bayar' : '✗ Belum Bayar'}
+                <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenMonthModal(student)
+                    }}
+                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl bg-white/10 text-white text-xs sm:text-sm border border-white/10 hover:bg-white/20 transition-colors"
+                  >
+                    Bayar Lebih dari 1 Bulan
+                  </button>
+
+                  {/* Current status badge */}
+                  <div
+                    className={`px-2.5 py-1 rounded-full text-[11px] sm:text-sm font-medium ${
+                      isPaid
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}
+                  >
+                    {isPaid ? '✓ Bayar' : '✗ Belum Bayar'}
+                  </div>
                 </div>
               </motion.div>
             )
           })}
+          {filteredStudents.length === 0 && (
+            <p className="text-center text-white/40 text-sm py-8">
+              {searchQuery ? 'No matching students found.' : 'No students found.'}
+            </p>
+          )}
         </div>
       )}
 
@@ -282,68 +332,7 @@ export default function StudentPaymentManager() {
         </div>
       </div>
 
-      {/* Bottom pop-up with save button */}
-      <AnimatePresence>
-        {checkedStudents.size > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed bottom-0 left-0 right-0 bg-dark-secondary/95 backdrop-blur-md border-t border-accent/30 shadow-2xl z-50"
-          >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
-              {/* Left side - info */}
-              <div>
-                <p className="text-white font-semibold">
-                  {checkedStudents.size} student{checkedStudents.size !== 1 ? 's' : ''} selected
-                </p>
-                <p className="text-sm text-white/60 mt-1">
-                  {Object.values(pendingChanges).filter(p => p.willBePaid).length} akan Bayar,{' '}
-                  {Object.values(pendingChanges).filter(p => !p.willBePaid).length} akan Belum Bayar
-                </p>
-              </div>
 
-              {/* Right side - buttons */}
-              <div className="flex gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                  className="px-6 py-3 glass text-white font-semibold rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleSaveChanges}
-                  disabled={isSaving}
-                  className="px-8 py-3 bg-gradient-to-r from-accent to-accent-light text-dark-primary font-display font-bold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isSaving ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity }}
-                        className="w-4 h-4 border-2 border-dark-primary border-t-transparent rounded-full"
-                      />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Check size={18} />
-                      Save Changes
-                    </>
-                  )}
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

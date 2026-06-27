@@ -130,7 +130,7 @@ export default function LoginPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute top-full left-0 right-0 mt-2 glass z-20 max-h-48 overflow-auto"
+                    className="absolute top-full left-0 right-0 mt-2 z-20 max-h-48 overflow-auto rounded-2xl bg-slate-900/95 border border-accent/20 shadow-lg"
                   >
                     {/* Search input */}
                     <input

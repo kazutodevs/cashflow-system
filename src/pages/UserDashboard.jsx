@@ -14,6 +14,7 @@ import {
   isSubscribed,
 } from '../lib/pushNotifications'
 
+import Toast from '../components/Toast'
 import DashboardCard from '../components/DashboardCard'
 import PaymentStatusTable from '../components/PaymentStatusTable'
 import TransactionList from '../components/TransactionList'
@@ -96,6 +97,28 @@ function NotificationCard({ studentId }) {
   useEffect(() => {
     syncStatus()
   }, [syncStatus])
+
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2500)
+    return () => clearTimeout(t)
+  }, [onDone])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 12, scale: 0.95 }}
+      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-2xl border border-green-500/30 bg-dark-secondary/95 backdrop-blur-md"
+    >
+      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500/20 shrink-0">
+        <Check size={14} className="text-green-400" />
+      </span>
+      <span className="text-sm font-medium text-white">{message}</span>
+    </motion.div>
+  )
+}
 
   // ── Enable Notification ─────────────────────────────────────
   const handleEnable = async () => {
@@ -560,6 +583,7 @@ export default function UserDashboard() {
   const [selectedIncome, setSelectedIncome]   = useState(null)
   const [selectedExpense, setSelectedExpense] = useState(null)
   const [lastUpdated, setLastUpdated]         = useState(null)
+  const [toast, setToast]                     = useState(null)
   const currentDate = new Date()
 
 const [selectedMonth, setSelectedMonth] = useState(
@@ -569,6 +593,11 @@ const [selectedMonth, setSelectedMonth] = useState(
 const [selectedYear, setSelectedYear] = useState(
   currentDate.getFullYear()
 ) 
+
+const handleRefresh = async () => {
+    await fetchDashboardData(true)
+    setToast('Data berhasil diperbarui!')
+  }
 
   // Simpan studentId di ref agar polling bisa akses tanpa re-create interval
   const studentIdRef = useRef(null)
@@ -632,6 +661,7 @@ const [selectedYear, setSelectedYear] = useState(
       )
 
       setLastUpdated(new Date())
+      
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err)
     } finally {
@@ -664,6 +694,10 @@ const [selectedYear, setSelectedYear] = useState(
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-primary via-dark-secondary to-dark-primary">
+      {/* ── Toast ── */}
+      <AnimatePresence>
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </AnimatePresence>
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
@@ -675,7 +709,7 @@ const [selectedYear, setSelectedYear] = useState(
                                 <motion.button
   whileHover={{ scale: 1.05 }}
   whileTap={{ scale: 0.95 }}
-  onClick={() => fetchDashboardData(true)}
+  onClick={handleRefresh}
   disabled={isLoading}
   className="mt-2 group relative overflow-hidden px-3 py-2 rounded-xl glass border border-white/10 hover:border-accent/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
 >

@@ -18,6 +18,29 @@ const calcTotalCash = (incomes = [], expenses = []) =>
   incomes.reduce((s, r) => s + (r.amount ?? 0), 0) -
   expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
 
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2500)
+    return () => clearTimeout(t)
+  }, [onDone])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 12, scale: 0.95 }}
+      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-2xl border border-green-500/30 bg-dark-secondary/95 backdrop-blur-md"
+    >
+      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500/20 shrink-0">
+        <Check size={14} className="text-green-400" />
+      </span>
+      <span className="text-sm font-medium text-white">{message}</span>
+    </motion.div>
+  )
+}
+
 // ─── Expense Detail Modal ──────────────────────────────────────────────────────
 function ExpenseDetailModal({ expense, onClose, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false)
@@ -443,93 +466,72 @@ function StatCard({ icon: Icon, title, value, subtext, accentClass }) {
     </div>
   )
 }
+
 const monthNames = [
-  'Januari',
-  'Februari',
-  'Maret',
-  'April',
-  'Mei',
-  'Juni',
-  'Juli',
-  'Agustus',
-  'September',
-  'Oktober',
-  'November',
-  'Desember',
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ]
+
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { logout } = useAuthStore()
 
-  const [expenses, setExpenses]                   = useState([])
-  const [incomes, setIncomes]                     = useState([])
-  const [financialSummary, setFinancialSummary]   = useState({ mini_bank: 0, treasurer: 0 })
-  const [summaryId, setSummaryId]                 = useState(null)
-  const [showExpenseForm, setShowExpenseForm]     = useState(false)
-  const [showIncomeForm, setShowIncomeForm]       = useState(false)
-  const [showNotifForm, setShowNotifForm]         = useState(false)
-  const [activeTab, setActiveTab]                 = useState('overview')
-  const [isLoading, setIsLoading]                 = useState(true)
-  const [selectedExpense, setSelectedExpense]     = useState(null)
-  const [selectedIncome, setSelectedIncome]       = useState(null)
-  const [lastUpdated, setLastUpdated]             = useState(null)
+  const [expenses, setExpenses]                 = useState([])
+  const [incomes, setIncomes]                   = useState([])
+  const [financialSummary, setFinancialSummary] = useState({ mini_bank: 0, treasurer: 0 })
+  const [summaryId, setSummaryId]               = useState(null)
+  const [showExpenseForm, setShowExpenseForm]   = useState(false)
+  const [showIncomeForm, setShowIncomeForm]     = useState(false)
+  const [showNotifForm, setShowNotifForm]       = useState(false)
+  const [activeTab, setActiveTab]               = useState('overview')
+  const [isLoading, setIsLoading]               = useState(true)
+  const [selectedExpense, setSelectedExpense]   = useState(null)
+  const [selectedIncome, setSelectedIncome]     = useState(null)
+  const [lastUpdated, setLastUpdated]           = useState(null)
+  const [toast, setToast]                       = useState(null)
+
   const currentDate = new Date()
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
+  const [selectedYear, setSelectedYear]   = useState(currentDate.getFullYear())
 
-const [selectedMonth, setSelectedMonth] = useState(
-  currentDate.getMonth() + 1
-)
-
-const [selectedYear, setSelectedYear] = useState(
-  currentDate.getFullYear()
-)
-
-const [unpaidStudents, setUnpaidStudents] = useState([])
-  
-
+  const [unpaidStudents, setUnpaidStudents]     = useState([])
+  const [paymentSelection, setPaymentSelection] = useState({
+    selectedCount: 0, pendingPaid: 0, pendingUnpaid: 0,
+    isSaving: false, saveChanges: null, cancelChanges: null,
+  })
+  const [showMonthModal, setShowMonthModal]                 = useState(false)
+  const [selectedPaymentStudent, setSelectedPaymentStudent] = useState(null)
+  const [studentMonthStatus, setStudentMonthStatus]         = useState({})
+  const [selectedMonths, setSelectedMonths]                 = useState(new Set())
+  const [isMonthModalLoading, setIsMonthModalLoading]       = useState(false)
+  const [isSavingMonths, setIsSavingMonths]                 = useState(false)
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchAdminData = useCallback(async (silent = false) => {
     try {
       if (!silent) setIsLoading(true)
-      
-const [
-  expenseRes,
-  incomeRes,
-  summaryRes,
-  studentsRes,
-  monthlyPaymentsRes,
-] = await Promise.all([
-  supabase.from('expenses').select('*').order('created_at', { ascending: false }),
 
-  supabase.from('income').select('*').order('created_at', { ascending: false }),
-
-  supabase.from('financial_summary').select('*').limit(1).maybeSingle(),
-
-  supabase.from('students').select('id, name'),
-
-  supabase
-    .from('payment_status')
-    .select('student_id, paid')
-    .eq('month', selectedMonth)
-    .eq('year', selectedYear),
-])
+      const [expenseRes, incomeRes, summaryRes, studentsRes, monthlyPaymentsRes] = await Promise.all([
+        supabase.from('expenses').select('*').order('created_at', { ascending: false }),
+        supabase.from('income').select('*').order('created_at', { ascending: false }),
+        supabase.from('financial_summary').select('*').limit(1).maybeSingle(),
+        supabase.from('students').select('id, name'),
+        supabase.from('payment_status').select('student_id, paid').eq('month', selectedMonth).eq('year', selectedYear),
+      ])
 
       setExpenses(expenseRes.data || [])
       setIncomes(incomeRes.data  || [])
 
-      const allStudents = studentsRes.data || []
-const monthlyPayments = monthlyPaymentsRes.data || []
+      const allStudents     = studentsRes.data || []
+      const monthlyPayments = monthlyPaymentsRes.data || []
 
-setUnpaidStudents(
-  allStudents.filter((student) => {
-    const payment = monthlyPayments.find(
-      (p) => p.student_id === student.id
-    )
-
-    return !payment || payment.paid === false
-  })
-)
+      setUnpaidStudents(
+        allStudents.filter((student) => {
+          const payment = monthlyPayments.find((p) => p.student_id === student.id)
+          return !payment || payment.paid === false
+        })
+      )
 
       if (summaryRes.data) {
         setFinancialSummary({ mini_bank: summaryRes.data.mini_bank ?? 0, treasurer: summaryRes.data.treasurer ?? 0 })
@@ -541,19 +543,21 @@ setUnpaidStudents(
       console.error('Failed to fetch admin data:', err)
     } finally {
       setIsLoading(false)
-      
     }
-}, [selectedMonth, selectedYear])
+  }, [selectedMonth, selectedYear])
 
-  // ── Initial fetch ───────────────────────────────────────────────────────────
   useEffect(() => {
     fetchAdminData(false)
   }, [fetchAdminData])
 
-  
-
   // ── Derived ─────────────────────────────────────────────────────────────────
   const totalClassCash = calcTotalCash(incomes, expenses)
+
+  // ── Refresh with toast ──────────────────────────────────────────────────────
+  const handleRefresh = async () => {
+    await fetchAdminData(true)
+    setToast('Data berhasil diperbarui!')
+  }
 
   // ── Summary update ──────────────────────────────────────────────────────────
   const updateSummaryField = async (field, value) => {
@@ -635,6 +639,91 @@ setUnpaidStudents(
     } catch (err) { console.error('Failed to delete income:', err) }
   }
 
+  const handlePaymentSelectionUpdate = ({ selectedCount, pendingPaid, pendingUnpaid, isSaving, saveChanges, cancelChanges }) => {
+    setPaymentSelection({ selectedCount, pendingPaid, pendingUnpaid, isSaving, saveChanges, cancelChanges })
+  }
+
+  const handlePaymentCancel = () => { paymentSelection.cancelChanges?.() }
+  const handlePaymentSave   = () => { paymentSelection.saveChanges?.() }
+
+  // ── Month Modal Handlers ────────────────────────────────────────────────────
+  const fetchStudentMonths = async (studentId) => {
+    try {
+      setIsMonthModalLoading(true)
+      const year = new Date().getFullYear()
+      const { data, error } = await supabase
+        .from('payment_status').select('month, paid').eq('student_id', studentId).eq('year', year)
+      if (error) throw error
+      const monthMap = {}
+      data?.forEach((item) => { monthMap[item.month] = item.paid })
+      setStudentMonthStatus(monthMap)
+    } catch (err) {
+      console.error('Failed to fetch student months:', err)
+      setStudentMonthStatus({})
+    } finally {
+      setIsMonthModalLoading(false)
+    }
+  }
+
+  const handleOpenMonthModal = async (student) => {
+    setSelectedPaymentStudent(student)
+    setSelectedMonths(new Set())
+    setShowMonthModal(true)
+    await fetchStudentMonths(student.id)
+  }
+
+  const handleToggleMonth = (month) => {
+    if (studentMonthStatus[month]) return
+    const next = new Set(selectedMonths)
+    if (next.has(month)) next.delete(month); else next.add(month)
+    setSelectedMonths(next)
+  }
+
+  const handleSaveMonthSelection = async () => {
+    if (!selectedPaymentStudent || selectedMonths.size === 0) return
+    setIsSavingMonths(true)
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+    try {
+      const year        = new Date().getFullYear()
+      const studentId   = selectedPaymentStudent.id
+      const studentName = selectedPaymentStudent.name
+
+      for (const month of Array.from(selectedMonths).sort((a, b) => a - b)) {
+        const { data: existingPayment, error } = await supabase
+          .from('payment_status').select('*').eq('student_id', studentId).eq('month', month).eq('year', year).maybeSingle()
+        if (error) throw error
+
+        if (existingPayment) {
+          if (!existingPayment.paid) {
+            await supabase.from('payment_status')
+              .update({ paid: true, updated_at: new Date().toISOString() }).eq('id', existingPayment.id)
+          }
+        } else {
+          await supabase.from('payment_status')
+            .insert([{ student_id: studentId, month, year, paid: true, updated_at: new Date().toISOString() }])
+        }
+
+        await supabase.from('income').insert([{
+          name: `${studentName} - ${MONTHS[month - 1]} Payment`,
+          amount: 10000, source: 'Student Contributions',
+          description: `Payment from ${studentName}`,
+          created_at: new Date().toISOString(),
+        }])
+      }
+
+      setShowMonthModal(false)
+      setSelectedPaymentStudent(null)
+      setSelectedMonths(new Set())
+      setStudentMonthStatus({})
+      await fetchAdminData(true)
+    } catch (err) {
+      console.error('Failed to save month selection:', err)
+      alert('Gagal menyimpan perubahan. Silakan coba lagi.')
+    } finally {
+      setIsSavingMonths(false)
+    }
+  }
+
   // ── Variants ────────────────────────────────────────────────────────────────
   const containerVariants = {
     hidden:  { opacity: 0 },
@@ -649,6 +738,11 @@ setUnpaidStudents(
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-primary via-dark-secondary to-dark-primary">
 
+      {/* ── Toast ── */}
+      <AnimatePresence>
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </AnimatePresence>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         className="sticky top-0 z-40 glass border-b border-accent/10 backdrop-blur-lg">
@@ -656,32 +750,26 @@ setUnpaidStudents(
           <div>
             <h1 className="text-2xl font-display font-bold text-white">Admin Panel</h1>
             <p className="text-sm text-white/60">by Nopal</p>
-                                            <motion.button
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
-  onClick={() => fetchAdminData(true)}
-  disabled={isLoading}
-  className="mt-2 group relative overflow-hidden px-3 py-2 rounded-xl glass border border-white/10 hover:border-accent/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
->
-  {/* glow */}
-  <div className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/10 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-  <div className="relative flex items-center gap-2">
-    <RefreshCw
-      size={16}
-      className={`text-accent transition-transform duration-500 ${
-        isLoading ? 'animate-spin' : 'group-hover:rotate-180'
-      }`}
-    />
-
-    <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
-      {isLoading ? 'Refreshing...' : 'Refresh'}
-    </span>
-  </div>
-</motion.button> 
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="mt-2 group relative overflow-hidden px-3 py-2 rounded-xl glass border border-white/10 hover:border-accent/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/10 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative flex items-center gap-2">
+                <RefreshCw
+                  size={16}
+                  className={`text-accent transition-transform duration-500 ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`}
+                />
+                <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
+                  {isLoading ? 'Refreshing...' : 'Refresh'}
+                </span>
+              </div>
+            </motion.button>
           </div>
           <div className="flex items-center gap-3">
-            {/* Live indicator */}
             <div className="flex items-center gap-2">
               {isLoading ? (
                 <RefreshCw size={13} className="text-accent animate-spin" />
@@ -796,58 +884,31 @@ setUnpaidStudents(
               </div>
 
               <div className="glass p-6 rounded-2xl">
-  <div className="flex items-center justify-between mb-4 gap-3">
-
-    <div>
-      <h3 className="text-lg font-display font-bold text-white">
-        Yang belum bayar
-      </h3>
-
-      <p className="text-xs text-white/40 mt-0.5">
-        {monthNames[selectedMonth - 1]} {selectedYear}
-      </p>
-    </div>
-
-    <select
-      value={selectedMonth}
-      onChange={(e) => setSelectedMonth(Number(e.target.value))}
-      className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-accent"
-    >
-      {monthNames.map((month, index) => (
-        <option
-          key={index}
-          value={index + 1}
-          className="bg-dark-secondary"
-        >
-          {month}
-        </option>
-      ))}
-    </select>
-  </div>
-
-  <div className="space-y-3 max-h-96 overflow-auto">
-    {unpaidStudents.length > 0 ? (
-      unpaidStudents.map((student) => (
-        <div
-          key={student.id}
-          className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-        >
-          <span className="text-white text-sm">
-            {student.name}
-          </span>
-
-          <span className="px-2.5 py-1 bg-red-500/20 border border-red-500/40 text-red-300 text-xs rounded-full">
-            ❌ Unpaid
-          </span>
-        </div>
-      ))
-    ) : (
-      <p className="text-white/40 text-sm text-center py-6">
-        Semua siswa sudah bayar ✅
-      </p>
-    )}
-  </div>
-</div>
+                <div className="flex items-center justify-between mb-4 gap-3">
+                  <div>
+                    <h3 className="text-lg font-display font-bold text-white">Yang belum bayar</h3>
+                    <p className="text-xs text-white/40 mt-0.5">{monthNames[selectedMonth - 1]} {selectedYear}</p>
+                  </div>
+                  <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-accent">
+                    {monthNames.map((month, index) => (
+                      <option key={index} value={index + 1} className="bg-dark-secondary">{month}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-3 max-h-96 overflow-auto">
+                  {unpaidStudents.length > 0 ? (
+                    unpaidStudents.map((student) => (
+                      <div key={student.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                        <span className="text-white text-sm">{student.name}</span>
+                        <span className="px-2.5 py-1 bg-red-500/20 border border-red-500/40 text-red-300 text-xs rounded-full">❌ Unpaid</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-white/40 text-sm text-center py-6">Semua siswa sudah bayar ✅</p>
+                  )}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -932,8 +993,11 @@ setUnpaidStudents(
 
         {/* ── PAYMENTS ── */}
         {activeTab === 'payments' && (
-          <motion.div variants={itemVariants}>
-            <StudentPaymentManager />
+          <motion.div variants={itemVariants} className="pb-28">
+            <StudentPaymentManager
+              onOpenMonthModal={handleOpenMonthModal}
+              onSelectionUpdate={handlePaymentSelectionUpdate}
+            />
           </motion.div>
         )}
 
@@ -948,6 +1012,110 @@ setUnpaidStudents(
         {selectedIncome && (
           <IncomeDetailModal income={selectedIncome} onClose={() => setSelectedIncome(null)} onUpdate={handleUpdateIncome} />
         )}
+
+        {activeTab === 'payments' && paymentSelection.selectedCount > 0 && (
+          <div className="fixed inset-x-0 bottom-0 z-50 bg-dark-secondary/95 backdrop-blur-md border-t border-accent/30 shadow-2xl px-4 py-3 sm:px-6">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {paymentSelection.selectedCount} student{paymentSelection.selectedCount !== 1 ? 's' : ''} selected
+                </p>
+                <p className="text-xs text-white/60 mt-1">
+                  {paymentSelection.pendingPaid} akan Bayar, {paymentSelection.pendingUnpaid} akan Belum Bayar
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <button onClick={handlePaymentCancel}
+                  className="w-full sm:w-auto px-4 py-2 glass text-white font-semibold rounded-lg hover:bg-white/20 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={handlePaymentSave} disabled={paymentSelection.isSaving}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-accent to-accent-light text-dark-primary font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50">
+                  {paymentSelection.isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── MONTH SELECTION MODAL ── */}
+        <AnimatePresence>
+          {showMonthModal && (
+            <>
+              <motion.div key="month-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setShowMonthModal(false)} className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+              <motion.div key="month-modal"
+                initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }} transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                <div className="pointer-events-auto w-full max-w-lg glass rounded-2xl border border-white/10 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}>
+                  <div className="relative flex items-center justify-between p-5 border-b border-white/10">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent-light" />
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-accent/20">
+                        <Check size={20} className="text-accent" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-display font-bold text-white">Detail Bulan Pembayaran</h2>
+                        <p className="text-xs text-white/40 mt-0.5">
+                          {selectedPaymentStudent?.name || 'Student'} - {new Date().getFullYear()}
+                        </p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setShowMonthModal(false)}
+                      className="w-9 h-9 rounded-full bg-white/5 hover:bg-red-500/20 border border-white/10 flex items-center justify-center text-white transition-colors flex-shrink-0">
+                      ✕
+                    </button>
+                  </div>
+                  <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                    <p className="text-sm text-white/50">
+                      Klik bulan untuk memilih pembayaran yang ingin disetujui. Bulan yang sudah dibayar tidak dapat diubah.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {monthNames.map((month, idx) => {
+                        const monthIndex = idx + 1
+                        const paid       = Boolean(studentMonthStatus[monthIndex])
+                        const selected   = selectedMonths.has(monthIndex)
+                        return (
+                          <button key={month} type="button" onClick={() => handleToggleMonth(monthIndex)} disabled={paid}
+                            className={`rounded-2xl border px-4 py-3 text-left font-medium transition-all ${
+                              paid     ? 'bg-slate-700 text-white border-black cursor-not-allowed'
+                              : selected ? 'bg-orange-500 text-white border-black'
+                              : 'bg-white/5 text-white border-white/10 hover:bg-white/10'
+                            }`}>
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{month}</span>
+                              {paid ? <Check size={16} className="text-white" /> : selected ? <span className="text-white">✓</span> : null}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
+                      <p className="text-sm text-white/60">
+                        {isMonthModalLoading ? 'Loading month status...'
+                          : selectedMonths.size > 0 ? `${selectedMonths.size} bulan dipilih untuk approve.`
+                          : 'Pilih bulan untuk disetujui.'}
+                      </p>
+                      <div className="flex gap-3">
+                        <button type="button" onClick={() => setShowMonthModal(false)}
+                          className="px-5 py-3 glass text-white rounded-lg hover:bg-white/10 transition-colors">
+                          Tutup
+                        </button>
+                        <button type="button" onClick={handleSaveMonthSelection}
+                          disabled={selectedMonths.size === 0 || isSavingMonths}
+                          className="px-5 py-3 bg-gradient-to-r from-accent to-accent-light text-dark-primary font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50">
+                          {isSavingMonths ? 'Saving...' : 'Approve Selected'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   )
