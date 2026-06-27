@@ -36,7 +36,7 @@ CREATE TABLE students (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR NOT NULL,
   email VARCHAR UNIQUE,
-  class_name VARCHAR DEFAULT 'X TKJ A',
+  class_name VARCHAR DEFAULT 'XI TKJ A',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

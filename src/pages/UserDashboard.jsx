@@ -26,34 +26,17 @@ const formatDate = (dateStr) => {
     day: '2-digit', month: 'short', year: 'numeric',
   })
 }
-const getCurrentMonthYear = () => {
-  const now = new Date()
-  return now.toLocaleDateString('id-ID', {
-    month: 'long',
-    year: 'numeric',
-  })
-}
 
 const monthNames = [
-  'Januari',
-  'Februari',
-  'Maret',
-  'April',
-  'Mei',
-  'Juni',
-  'Juli',
-  'Agustus',
-  'September',
-  'Oktober',
-  'November',
-  'Desember',
+  'Januari','Februari','Maret','April','Mei','Juni',
+  'Juli','Agustus','September','Oktober','November','Desember',
 ]
 
 const formatDateDetailed = (dateStr) => {
   if (!dateStr) return '-'
   const utcDate = new Date(dateStr)
   const wibDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000)
-  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu']
   const dayName = days[wibDate.getUTCDay()]
   const dd   = String(wibDate.getUTCDate()).padStart(2, '0')
   const mm   = String(wibDate.getUTCMonth() + 1).padStart(2, '0')
@@ -68,109 +51,82 @@ const getProofUrl = (path) => {
   return `https://fxxjfkcjtuuxbrxhfrph.supabase.co/storage/v1/object/public/expense-proofs/${path}`
 }
 
-// ─── Notification Permission Card ──────────────────────────────────────────────
+// ─── Design tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:         '#0a0a0a',
+  surface:    'rgba(255,255,255,0.04)',
+  surfaceHov: 'rgba(255,255,255,0.07)',
+  border:     'rgba(255,255,255,0.09)',
+  borderStr:  'rgba(255,255,255,0.16)',
+  text1:      '#f0f0f0',          // brighter primary
+  text2:      'rgba(240,240,240,0.65)', // brighter secondary
+  text3:      'rgba(240,240,240,0.38)', // muted
+  accent:     '#8b5cf6',          // soft purple accent only
+  accentDim:  'rgba(139,92,246,0.12)',
+  accentBdr:  'rgba(139,92,246,0.25)',
+  green:      '#4ade80',
+  greenDim:   'rgba(74,222,128,0.10)',
+  greenBdr:   'rgba(74,222,128,0.22)',
+  orange:     '#fb923c',
+  orangeDim:  'rgba(251,146,60,0.10)',
+  orangeBdr:  'rgba(251,146,60,0.22)',
+  red:        '#f87171',
+  redDim:     'rgba(248,113,113,0.10)',
+  redBdr:     'rgba(248,113,113,0.22)',
+  blue:       '#60a5fa',
+  blueDim:    'rgba(96,165,250,0.10)',
+  blueBdr:    'rgba(96,165,250,0.22)',
+}
+
+const glass = {
+  background:     C.surface,
+  border:         `1px solid ${C.border}`,
+  backdropFilter: 'blur(16px)',
+  borderRadius:   '14px',
+}
+
+// ─── Notification Card ─────────────────────────────────────────────────────────
 function NotificationCard({ studentId }) {
   const [status, setStatus] = useState('idle')
 
   const syncStatus = useCallback(async () => {
     const perm = getNotificationPermission()
-
-    if (perm === 'unsupported') {
-      setStatus('unsupported')
-      return
-    }
-
-    if (perm === 'denied') {
-      setStatus('denied')
-      return
-    }
-
+    if (perm === 'unsupported') { setStatus('unsupported'); return }
+    if (perm === 'denied')      { setStatus('denied');      return }
     if (perm === 'granted') {
       const sub = await isSubscribed()
       setStatus(sub ? 'granted' : 'default')
       return
     }
-
     setStatus('default')
   }, [])
 
-  useEffect(() => {
-    syncStatus()
-  }, [syncStatus])
+  useEffect(() => { syncStatus() }, [syncStatus])
 
-function Toast({ message, onDone }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 2500)
-    return () => clearTimeout(t)
-  }, [onDone])
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 12, scale: 0.95 }}
-      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-2xl border border-green-500/30 bg-dark-secondary/95 backdrop-blur-md"
-    >
-      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500/20 shrink-0">
-        <Check size={14} className="text-green-400" />
-      </span>
-      <span className="text-sm font-medium text-white">{message}</span>
-    </motion.div>
-  )
-}
-
-  // ── Enable Notification ─────────────────────────────────────
   const handleEnable = async () => {
     if (!studentId) return
-
     setStatus('loading')
-
     try {
-      // Browser modern tidak bisa munculkan popup lagi kalau denied
       if (Notification.permission === 'denied') {
-        alert(
-          'Notifikasi diblokir.\n\nSilakan klik icon gembok di browser lalu izinkan notifikasi untuk website ini.'
-        )
-
-        setStatus('denied')
-        return
+        alert('Notifikasi diblokir.\n\nSilakan klik icon gembok di browser lalu izinkan notifikasi untuk website ini.')
+        setStatus('denied'); return
       }
-const permission = await Notification.requestPermission()
-
-if (permission !== 'granted') {
-  setStatus('denied')
-  return
-}
-
-await subscribeToPush(studentId)
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') { setStatus('denied'); return }
       await subscribeToPush(studentId)
-
       setStatus('granted')
     } catch (err) {
       console.error(err)
-
-      if (Notification.permission === 'denied') {
-        setStatus('denied')
-      } else {
-        setStatus('default')
-      }
+      setStatus(Notification.permission === 'denied' ? 'denied' : 'default')
     }
   }
 
-  // ── Disable Notification ────────────────────────────────────
   const unsubscribePush = async () => {
     try {
       setStatus('loading')
-
-      const registration = await navigator.serviceWorker.ready
-      const subscription =
-        await registration.pushManager.getSubscription()
-
-      if (subscription) {
-        await subscription.unsubscribe()
-      }
-
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) await sub.unsubscribe()
       setStatus('default')
     } catch (err) {
       console.error('Failed to unsubscribe:', err)
@@ -178,390 +134,301 @@ await subscribeToPush(studentId)
     }
   }
 
-  // ── Derived state ───────────────────────────────────────────
   const isGranted     = status === 'granted'
   const isDenied      = status === 'denied'
   const isLoading     = status === 'loading'
   const isUnsupported = status === 'unsupported'
 
+  const barColor = isGranted ? C.green : isDenied ? C.red : C.borderStr
+
   return (
-    <div className="glass p-6 rounded-2xl relative overflow-hidden">
-
-      {/* Top Accent */}
-      <div
-        className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r transition-all duration-500
-          ${
-            isGranted
-              ? 'from-green-400 to-emerald-500'
-              : isDenied
-                ? 'from-red-400 to-rose-500'
-                : 'from-white/20 to-white/10'
-          }`}
-      />
-
-      <div className="flex items-center justify-between">
-
-        {/* Left */}
-        <div className="flex items-center gap-4">
-
-          {/* Icon */}
-          <div
-            className={`relative p-3 rounded-xl transition-colors duration-300
-              ${
-                isGranted
-                  ? 'bg-green-500/15'
-                  : isDenied
-                    ? 'bg-red-500/15'
-                    : 'bg-white/10'
-              }`}
-          >
-            {isLoading ? (
-              <Loader2
-                size={22}
-                className="text-white/60 animate-spin"
-              />
-            ) : isGranted ? (
-              <BellRing
-                size={22}
-                className="text-green-400"
-              />
-            ) : isDenied ? (
-              <BellOff
-                size={22}
-                className="text-red-400"
-              />
-            ) : (
-              <Bell
-                size={22}
-                className="text-white/60"
-              />
-            )}
+    <div style={{ ...glass, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: barColor, transition: 'background 0.4s' }} />
+      <div className="notif-inner">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
+            background: isGranted ? C.greenDim : isDenied ? C.redDim : C.surface,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.3s',
+          }}>
+            {isLoading
+              ? <Loader2 size={18} color={C.text3} className="spin" />
+              : isGranted ? <BellRing size={18} color={C.green} />
+              : isDenied  ? <BellOff  size={18} color={C.red}   />
+              : <Bell size={18} color={C.text3} />}
           </div>
-
-          {/* Text */}
           <div>
-            <p className="text-white font-semibold text-sm">
-              Notifikasi
-            </p>
-
-            <p
-              className={`text-xs mt-0.5 transition-colors duration-300
-                ${
-                  isGranted
-                    ? 'text-green-400'
-                    : isDenied
-                      ? 'text-red-400'
-                      : 'text-white/40'
-                }`}
-            >
-              {isLoading
-                ? 'Memproses...'
-                : isGranted
-                  ? 'Aktif - kamu akan menerima notifikasi'
-                  : isDenied
-                    ? 'Diblokir browser'
-                    : isUnsupported
-                      ? 'Browser tidak mendukung notifikasi'
-                      : 'Belum diaktifkan'}
+            <p style={{ color: C.text1, fontWeight: 700, fontSize: '14px', margin: 0 }}>Notifikasi</p>
+            <p style={{ fontSize: '12px', marginTop: '2px', color: isGranted ? C.green : isDenied ? C.red : C.text3 }}>
+              {isLoading ? 'Memproses...'
+                : isGranted ? 'Aktif — kamu akan menerima notifikasi'
+                : isDenied  ? 'Diblokir browser'
+                : isUnsupported ? 'Browser tidak mendukung'
+                : 'Belum diaktifkan'}
             </p>
           </div>
         </div>
 
-        {/* Right */}
-        <div className="flex items-center gap-3 shrink-0">
-
-          {/* Status Icon */}
-          <motion.div
-            key={status}
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 14 }}
-          >
-            {isGranted ? (
-              <CheckCircle2
-                size={22}
-                className="text-green-400 drop-shadow-[0_0_6px_rgba(74,222,128,0.6)]"
-              />
-            ) : isDenied ? (
-              <XCircle
-                size={22}
-                className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.6)]"
-              />
-            ) : null}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <motion.div key={status} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+            {isGranted ? <CheckCircle2 size={18} color={C.green} />
+              : isDenied ? <XCircle size={18} color={C.red} /> : null}
           </motion.div>
-
-          {/* Action Button */}
           {!isUnsupported && (
             <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={
-                isGranted
-                  ? unsubscribePush
-                  : handleEnable
-              }
+              whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+              onClick={isGranted ? unsubscribePush : handleEnable}
               disabled={isLoading}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed
-                ${
-                  isGranted
-                    ? 'bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30'
-                    : 'bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30'
-                }`}
+              style={{
+                padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.4 : 1,
+                fontFamily: "'Inter', sans-serif", transition: 'all 0.2s', whiteSpace: 'nowrap',
+                ...(isGranted
+                  ? { background: C.redDim,   border: `1px solid ${C.redBdr}`,   color: C.red   }
+                  : { background: C.greenDim, border: `1px solid ${C.greenBdr}`, color: C.green }),
+              }}
             >
-              {isLoading
-                ? '...'
-                : isGranted
-                  ? 'Nonaktifkan'
-                  : isDenied
-                    ? 'Izinkan Lagi'
-                    : 'Aktifkan'}
+              {isLoading ? '...' : isGranted ? 'Nonaktifkan' : isDenied ? 'Izinkan Lagi' : 'Aktifkan'}
             </motion.button>
           )}
         </div>
       </div>
-
-      {/* Helper */}
       {isDenied && (
-        <motion.p
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="mt-3 text-xs text-white/30 leading-relaxed"
-        >
-          Browser memblokir notifikasi.
-          Buka <strong>Pengaturan → Privasi → Notifikasi</strong>
-          lalu izinkan website ini dan refresh halaman.
+        <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+          style={{ marginTop: '10px', fontSize: '12px', color: C.text3, lineHeight: 1.6 }}>
+          Buka <strong style={{ color: C.text2 }}>Pengaturan → Privasi → Notifikasi</strong> lalu izinkan website ini dan refresh halaman.
         </motion.p>
       )}
     </div>
   )
 }
 
-// ─── Income Detail Modal ────────────────────────────────────────────────────────
-function IncomeDetailModal({ income, onClose }) {
+// ─── Modal shell ───────────────────────────────────────────────────────────────
+function Modal({ onClose, accentColor, accentDim, icon, title, subtitle, children }) {
   return (
     <AnimatePresence>
       <motion.div
-        key="income-user-backdrop"
+        key="backdrop"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+        style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
       />
       <motion.div
-        key="income-user-modal"
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        key="modal"
+        initial={{ opacity: 0, scale: 0.93, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+        exit={{ opacity: 0, scale: 0.93, y: 24 }}
+        transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+        style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0', pointerEvents: 'none' }}
+        className="modal-wrapper"
       >
-        <div
-          className="pointer-events-auto w-full max-w-lg glass rounded-2xl border border-white/10 overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="relative flex items-center justify-between p-5 border-b border-white/10">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 to-emerald-500" />
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/20">
-                <ArrowUpCircle size={20} className="text-green-400" />
+        <div onClick={e => e.stopPropagation()} style={{
+          pointerEvents: 'auto', width: '100%', maxWidth: '480px',
+          background: '#111', border: `1px solid ${C.border}`,
+          borderRadius: '20px 20px 0 0', overflow: 'hidden',
+        }} className="modal-card">
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: accentColor }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', borderRadius: '10px', background: accentDim }}>
+                {icon}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Detail Pemasukan</h2>
-                <p className="text-sm text-white/40 mt-0.5">Informasi lengkap transaksi pemasukan</p>
+                <h2 style={{ fontSize: '16px', fontWeight: 800, color: C.text1, margin: 0 }}>{title}</h2>
+                <p style={{ fontSize: '11px', color: C.text3, margin: '2px 0 0' }}>{subtitle}</p>
               </div>
             </div>
-            <button onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/5 hover:bg-red-500/20 border border-white/10 flex items-center justify-center text-white transition-colors">
-              ✕
-            </button>
+            <button onClick={onClose} style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              background: C.surface, border: `1px solid ${C.border}`,
+              color: C.text2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
+            }}>✕</button>
           </div>
-
-          {/* Body */}
-          <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-            <div>
-              <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5"><FileText size={11} /> Nama Pemasukan</p>
-              <p className="text-white font-semibold text-lg">{income.name}</p>
-            </div>
-            <div>
-              <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5"><Wallet size={11} /> Jumlah Pemasukan</p>
-              <p className="text-green-400 font-bold text-2xl">+Rp {Number(income.amount).toLocaleString('id-ID')}</p>
-            </div>
-            {income.source && (
-              <div>
-                <p className="text-white/40 text-xs mb-1.5 flex items-center gap-1.5"><Tag size={11} /> Sumber</p>
-                <span className="inline-block px-3 py-1 bg-green-500/10 border border-green-500/20 text-green-400 rounded-full text-sm">
-                  {income.source}
-                </span>
-              </div>
-            )}
-            {income.description && (
-              <div>
-                <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5"><FileText size={11} /> Deskripsi</p>
-                <p className="text-white/80 leading-relaxed text-sm">{income.description}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-white/40 text-xs mb-1">Tanggal & Waktu</p>
-              <p className="text-white font-medium">{formatDateDetailed(income.created_at)}</p>
-            </div>
-            <div className="pt-2">
-              <button onClick={onClose}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 transition-all duration-200 text-green-300 font-bold">
-                Tutup
-              </button>
-            </div>
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '72vh', overflowY: 'auto' }}>
+            {children}
           </div>
         </div>
       </motion.div>
     </AnimatePresence>
+  )
+}
+
+// ─── Income Detail Modal ────────────────────────────────────────────────────────
+function IncomeDetailModal({ income, onClose }) {
+  return (
+    <Modal onClose={onClose} accentColor={C.green} accentDim={C.greenDim}
+      icon={<ArrowUpCircle size={18} color={C.green} />}
+      title="Detail Pemasukan" subtitle="Informasi lengkap transaksi pemasukan">
+      <ModalField label="Nama Pemasukan" icon={<FileText size={11} />}>
+        <p style={{ fontSize: '17px', fontWeight: 700, color: C.text1, margin: 0 }}>{income.name}</p>
+      </ModalField>
+      <ModalField label="Jumlah" icon={<Wallet size={11} />}>
+        <p style={{ fontSize: '24px', fontWeight: 900, color: C.green, margin: 0 }}>+Rp {Number(income.amount).toLocaleString('id-ID')}</p>
+      </ModalField>
+      {income.source && (
+        <ModalField label="Sumber" icon={<Tag size={11} />}>
+          <Pill color={C.green} dim={C.greenDim} bdr={C.greenBdr}>{income.source}</Pill>
+        </ModalField>
+      )}
+      {income.description && (
+        <ModalField label="Deskripsi" icon={<FileText size={11} />}>
+          <p style={{ fontSize: '13px', color: C.text2, lineHeight: 1.6, margin: 0 }}>{income.description}</p>
+        </ModalField>
+      )}
+      <ModalField label="Tanggal & Waktu">
+        <p style={{ fontSize: '13px', fontWeight: 600, color: C.text1, margin: 0 }}>{formatDateDetailed(income.created_at)}</p>
+      </ModalField>
+      <button onClick={onClose} style={{
+        width: '100%', padding: '13px', borderRadius: '10px', marginTop: '4px',
+        background: C.greenDim, border: `1px solid ${C.greenBdr}`,
+        color: C.green, fontWeight: 800, fontSize: '14px', cursor: 'pointer', fontFamily: "'Inter', sans-serif",
+      }}>Tutup</button>
+    </Modal>
   )
 }
 
 // ─── Expense Detail Modal ───────────────────────────────────────────────────────
 function ExpenseDetailModal({ expense, onClose }) {
   return (
-    <AnimatePresence>
-      <motion.div
-        key="expense-user-backdrop"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-      />
-      <motion.div
-        key="expense-user-modal"
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
-      >
-        <div
-          className="pointer-events-auto w-full max-w-lg glass rounded-2xl border border-white/10 overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="relative flex items-center justify-between p-5 border-b border-white/10">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent-light" />
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-accent/20">
-                <ArrowDownCircle size={20} className="text-accent" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-white">Detail Pengeluaran</h2>
-                <p className="text-sm text-white/40 mt-0.5">Lihat bukti bayar dan detail transaksi</p>
-              </div>
-            </div>
-            <button onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/5 hover:bg-red-500/20 border border-white/10 flex items-center justify-center text-white transition-colors">
-              ✕
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-            {expense.proof_image_url && (
-              <div className="rounded-xl overflow-hidden border border-white/10">
-                <img src={getProofUrl(expense.proof_image_url)} alt="Bukti pembayaran"
-                  className="w-full h-64 object-cover" />
-              </div>
-            )}
-            <div>
-              <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5"><FileText size={11} /> Nama Pengeluaran</p>
-              <p className="text-white font-semibold text-lg">{expense.name}</p>
-            </div>
-            <div>
-              <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5"><Wallet size={11} /> Jumlah Pengeluaran</p>
-              <p className="text-accent font-bold text-2xl">-Rp {Number(expense.amount).toLocaleString('id-ID')}</p>
-            </div>
-            {expense.category && (
-              <div>
-                <p className="text-white/40 text-xs mb-1.5 flex items-center gap-1.5"><Tag size={11} /> Kategori</p>
-                <span className="inline-block px-3 py-1 bg-accent/10 border border-accent/20 text-accent rounded-full text-sm">
-                  {expense.category}
-                </span>
-              </div>
-            )}
-            {expense.description && (
-              <div>
-                <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5"><FileText size={11} /> Deskripsi</p>
-                <p className="text-white/80 leading-relaxed text-sm">{expense.description}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-white/40 text-xs mb-1">Tanggal & Waktu</p>
-              <p className="text-white font-medium">{formatDateDetailed(expense.created_at)}</p>
-            </div>
-            <div className="pt-2">
-              {expense.proof_image_url ? (
-                <a href={getProofUrl(expense.proof_image_url)} target="_blank" rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 transition-all duration-200 text-black font-bold shadow-lg shadow-orange-500/20">
-                  <ExternalLink size={18} /> Lihat Bukti Bayar
-                </a>
-              ) : (
-                <button disabled className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white/40 cursor-not-allowed">
-                  Tidak Ada Bukti Pembayaran
-                </button>
-              )}
-            </div>
-          </div>
+    <Modal onClose={onClose} accentColor={C.orange} accentDim={C.orangeDim}
+      icon={<ArrowDownCircle size={18} color={C.orange} />}
+      title="Detail Pengeluaran" subtitle="Lihat bukti bayar dan detail transaksi">
+      {expense.proof_image_url && (
+        <div style={{ borderRadius: '10px', overflow: 'hidden', border: `1px solid ${C.border}` }}>
+          <img src={getProofUrl(expense.proof_image_url)} alt="Bukti pembayaran" style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
         </div>
-      </motion.div>
-    </AnimatePresence>
+      )}
+      <ModalField label="Nama Pengeluaran" icon={<FileText size={11} />}>
+        <p style={{ fontSize: '17px', fontWeight: 700, color: C.text1, margin: 0 }}>{expense.name}</p>
+      </ModalField>
+      <ModalField label="Jumlah" icon={<Wallet size={11} />}>
+        <p style={{ fontSize: '24px', fontWeight: 900, color: C.orange, margin: 0 }}>-Rp {Number(expense.amount).toLocaleString('id-ID')}</p>
+      </ModalField>
+      {expense.category && (
+        <ModalField label="Kategori" icon={<Tag size={11} />}>
+          <Pill color={C.orange} dim={C.orangeDim} bdr={C.orangeBdr}>{expense.category}</Pill>
+        </ModalField>
+      )}
+      {expense.description && (
+        <ModalField label="Deskripsi" icon={<FileText size={11} />}>
+          <p style={{ fontSize: '13px', color: C.text2, lineHeight: 1.6, margin: 0 }}>{expense.description}</p>
+        </ModalField>
+      )}
+      <ModalField label="Tanggal & Waktu">
+        <p style={{ fontSize: '13px', fontWeight: 600, color: C.text1, margin: 0 }}>{formatDateDetailed(expense.created_at)}</p>
+      </ModalField>
+      <div style={{ marginTop: '4px' }}>
+        {expense.proof_image_url ? (
+          <a href={getProofUrl(expense.proof_image_url)} target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: '13px', borderRadius: '10px', background: C.orange,
+              color: '#000', fontWeight: 800, fontSize: '14px', textDecoration: 'none', fontFamily: "'Inter', sans-serif",
+            }}>
+            <ExternalLink size={16} /> Lihat Bukti Bayar
+          </a>
+        ) : (
+          <button disabled style={{
+            width: '100%', padding: '13px', borderRadius: '10px',
+            background: C.surface, border: `1px solid ${C.border}`,
+            color: C.text3, cursor: 'not-allowed', fontFamily: "'Inter', sans-serif",
+          }}>Tidak Ada Bukti Pembayaran</button>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+// ─── Small helpers ─────────────────────────────────────────────────────────────
+function ModalField({ label, icon, children }) {
+  return (
+    <div>
+      <p style={{ fontSize: '11px', color: C.text3, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        {icon} {label}
+      </p>
+      {children}
+    </div>
+  )
+}
+
+function Pill({ color, dim, bdr, children }) {
+  return (
+    <span style={{ display: 'inline-block', padding: '4px 12px', background: dim, border: `1px solid ${bdr}`, color, borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+      {children}
+    </span>
   )
 }
 
 // ─── Income Row ─────────────────────────────────────────────────────────────────
 function IncomeRow({ income, onClick }) {
   return (
-    <button onClick={() => onClick(income)}
-      className="w-full flex items-start justify-between p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-all hover:scale-[1.01] gap-3 text-left">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="p-2 bg-green-500/10 rounded-lg shrink-0">
-          <ArrowUpCircle size={18} className="text-green-400" />
+    <motion.button whileHover={{ background: C.surfaceHov }} whileTap={{ scale: 0.99 }}
+      onClick={() => onClick(income)}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 16px', borderRadius: '12px', background: C.surface,
+        border: `1px solid ${C.border}`, gap: '12px', textAlign: 'left', cursor: 'pointer',
+        fontFamily: "'Inter', sans-serif", transition: 'background 0.15s',
+      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+        <div style={{ padding: '8px', background: C.greenDim, borderRadius: '9px', flexShrink: 0 }}>
+          <ArrowUpCircle size={16} color={C.green} />
         </div>
-        <div className="min-w-0">
-          <p className="text-white font-medium truncate">{income.name}</p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-            {income.source && (
-              <span className="inline-block px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400 text-xs rounded-full">
-                {income.source}
-              </span>
-            )}
-            <span className="text-xs text-white/40">{formatDate(income.created_at)}</span>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ color: C.text1, fontWeight: 600, fontSize: '14px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.name}</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+            {income.source && <Pill color={C.green} dim={C.greenDim} bdr={C.greenBdr}>{income.source}</Pill>}
+            <span style={{ fontSize: '11px', color: C.text3 }}>{formatDate(income.created_at)}</span>
           </div>
         </div>
       </div>
-      <p className="text-green-400 font-bold shrink-0 pt-1">+Rp {income.amount.toLocaleString('id-ID')}</p>
-    </button>
+      <p style={{ color: C.green, fontWeight: 800, fontSize: '14px', flexShrink: 0, margin: 0 }}>+Rp {income.amount.toLocaleString('id-ID')}</p>
+    </motion.button>
   )
 }
 
 // ─── Expense Row ────────────────────────────────────────────────────────────────
 function ExpenseRow({ expense, onClick }) {
   return (
-    <button onClick={() => onClick(expense)}
-      className="w-full flex items-start justify-between p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-all hover:scale-[1.01] gap-3 text-left">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="p-2 bg-accent/10 rounded-lg shrink-0">
-          <ArrowDownCircle size={18} className="text-accent" />
+    <motion.button whileHover={{ background: C.surfaceHov }} whileTap={{ scale: 0.99 }}
+      onClick={() => onClick(expense)}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 16px', borderRadius: '12px', background: C.surface,
+        border: `1px solid ${C.border}`, gap: '12px', textAlign: 'left', cursor: 'pointer',
+        fontFamily: "'Inter', sans-serif", transition: 'background 0.15s',
+      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+        <div style={{ padding: '8px', background: C.orangeDim, borderRadius: '9px', flexShrink: 0 }}>
+          <ArrowDownCircle size={16} color={C.orange} />
         </div>
-        <div className="min-w-0">
-          <p className="text-white font-medium truncate">{expense.name}</p>
-          {expense.description && (
-            <p className="text-xs text-white/50 truncate mt-0.5">{expense.description}</p>
-          )}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-            {expense.category && (
-              <span className="inline-block px-2 py-0.5 bg-accent/10 border border-accent/20 text-accent text-xs rounded-full">
-                {expense.category}
-              </span>
-            )}
-            <span className="text-xs text-white/40">{formatDate(expense.created_at)}</span>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ color: C.text1, fontWeight: 600, fontSize: '14px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expense.name}</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+            {expense.category && <Pill color={C.orange} dim={C.orangeDim} bdr={C.orangeBdr}>{expense.category}</Pill>}
+            <span style={{ fontSize: '11px', color: C.text3 }}>{formatDate(expense.created_at)}</span>
           </div>
         </div>
       </div>
-      <p className="text-accent font-bold shrink-0 pt-1">-Rp {expense.amount.toLocaleString('id-ID')}</p>
-    </button>
+      <p style={{ color: C.orange, fontWeight: 800, fontSize: '14px', flexShrink: 0, margin: 0 }}>-Rp {expense.amount.toLocaleString('id-ID')}</p>
+    </motion.button>
+  )
+}
+
+// ─── Stat Card ─────────────────────────────────────────────────────────────────
+function StatCard({ icon, label, value, sub, color, dim, bdr }) {
+  return (
+    <div style={{ background: dim, border: `1px solid ${bdr}`, borderRadius: '14px', padding: '18px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '14px' }}>
+        <div style={{ padding: '7px', borderRadius: '9px', background: `${dim}cc` }}>
+          {icon}
+        </div>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{label}</span>
+      </div>
+      <p style={{ fontSize: '20px', fontWeight: 900, color: C.text1, margin: 0, letterSpacing: '-0.5px' }}>{value}</p>
+      <p style={{ fontSize: '11px', color: C.text3, margin: '5px 0 0' }}>{sub}</p>
+    </div>
   )
 }
 
@@ -586,37 +453,26 @@ export default function UserDashboard() {
   const [toast, setToast]                     = useState(null)
   const currentDate = new Date()
 
-const [selectedMonth, setSelectedMonth] = useState(
-  currentDate.getMonth() + 1
-)
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
+  const [selectedYear, setSelectedYear]   = useState(currentDate.getFullYear())
 
-const [selectedYear, setSelectedYear] = useState(
-  currentDate.getFullYear()
-) 
-
-const handleRefresh = async () => {
+  const handleRefresh = async () => {
     await fetchDashboardData(true)
     setToast('Data berhasil diperbarui!')
   }
 
-  // Simpan studentId di ref agar polling bisa akses tanpa re-create interval
   const studentIdRef = useRef(null)
 
-  // ── Fetch semua data ────────────────────────────────────────────────────────
   const fetchDashboardData = useCallback(async (silent = false) => {
     try {
       if (!silent) setIsLoading(true)
 
-      // Fetch student row jika belum ada
       let sid  = studentIdRef.current
       let name = studentName
 
       if (!sid) {
         const { data: studentRow } = await supabase
-          .from('students')
-          .select('id, name')
-          .eq('id', user?.student_id)
-          .maybeSingle()
+          .from('students').select('id, name').eq('id', user?.student_id).maybeSingle()
         sid  = studentRow?.id   ?? null
         name = studentRow?.name ?? ''
         setStudentName(name)
@@ -624,28 +480,19 @@ const handleRefresh = async () => {
         studentIdRef.current = sid
       }
 
-      const [
-        finRes, transRes, paymentRes, studentsRes,
-        monthlyPaymentsRes, incomeRes, expenseRes,
-      ] = await Promise.all([
+      const [finRes, transRes, paymentRes, studentsRes, monthlyPaymentsRes, incomeRes, expenseRes] = await Promise.all([
         supabase.from('financial_summary').select('*').single(),
         supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(10),
         sid
           ? supabase.from('payment_status').select('*').eq('student_id', sid).order('month', { ascending: true })
           : Promise.resolve({ data: [] }),
         supabase.from('students').select('id, name'),
-        supabase.from('payment_status')
-          .select('student_id, paid')
-.eq('month', selectedMonth)
-.eq('year', selectedYear),
+        supabase.from('payment_status').select('student_id, paid').eq('month', selectedMonth).eq('year', selectedYear),
         supabase.from('income').select('*').order('created_at', { ascending: false }),
         supabase.from('expenses').select('*').order('created_at', { ascending: false }),
       ])
 
-      setStats({
-        miniBank:  finRes.data?.mini_bank  ?? 0,
-        treasurer: finRes.data?.treasurer  ?? 0,
-      })
+      setStats({ miniBank: finRes.data?.mini_bank ?? 0, treasurer: finRes.data?.treasurer ?? 0 })
       setTransactions(transRes.data    || [])
       setPaymentStatus(paymentRes.data || [])
       setIncomes(incomeRes.data        || [])
@@ -659,9 +506,7 @@ const handleRefresh = async () => {
           return !p || p.paid === false
         })
       )
-
       setLastUpdated(new Date())
-      
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err)
     } finally {
@@ -669,117 +514,124 @@ const handleRefresh = async () => {
     }
   }, [user?.student_id, selectedMonth, selectedYear])
 
-  // ── Initial fetch ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    fetchDashboardData(false)
-  }, [fetchDashboardData])
+  useEffect(() => { fetchDashboardData(false) }, [fetchDashboardData])
 
-  // ── Derived: total kas = income - expense (reaktif) ─────────────────────────
-  const totalCash = incomes.reduce((s, r) => s + (r.amount ?? 0), 0)
-                  - expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
-
-  const totalIncome  = incomes.reduce((s, r)  => s + (r.amount ?? 0), 0)
+  const totalCash    = incomes.reduce((s, r) => s + (r.amount ?? 0), 0) - expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
+  const totalIncome  = incomes.reduce((s, r) => s + (r.amount ?? 0), 0)
   const totalExpense = expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
 
   const handleLogout = () => { logout(); navigate('/login') }
 
+  const tabs = [
+    { key: 'overview', label: 'Overview'    },
+    { key: 'income',   label: 'Pemasukan'   },
+    { key: 'expenses', label: 'Pengeluaran' },
+    { key: 'payments', label: 'Pembayaran'  },
+  ]
+
   const containerVariants = {
     hidden:  { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
+    visible: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
   }
   const itemVariants = {
-    hidden:  { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+    hidden:  { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-primary via-dark-secondary to-dark-primary">
-      {/* ── Toast ── */}
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Inter', sans-serif", position: 'relative', overflowX: 'hidden' }}>
+
+      {/* Subtle purple glow — far background only */}
+      <div style={{ position: 'fixed', top: '-120px', right: '-120px', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
+      <div style={{ position: 'fixed', bottom: '5%', left: '-80px', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
+
+      {/* Toast */}
       <AnimatePresence>
         {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </AnimatePresence>
 
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-40 glass border-b border-accent/10 backdrop-blur-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-white">Dashboard</h1>
-            <p className="text-xs text-white/40 mt-0.5 tracking-wide">by nopal</p>
-                                <motion.button
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
-  onClick={handleRefresh}
-  disabled={isLoading}
-  className="mt-2 group relative overflow-hidden px-3 py-2 rounded-xl glass border border-white/10 hover:border-accent/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
->
-  {/* glow */}
-  <div className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/10 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-  <div className="relative flex items-center gap-2">
-    <RefreshCw
-      size={16}
-      className={`text-accent transition-transform duration-500 ${
-        isLoading ? 'animate-spin' : 'group-hover:rotate-180'
-      }`}
-    />
-
-    <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
-      {isLoading ? 'Refreshing...' : 'Refresh'}
-    </span>
-  </div>
-</motion.button> 
+      {/* ── Header ── */}
+      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+        style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(10,10,10,0.88)', borderBottom: `1px solid ${C.border}`, backdropFilter: 'blur(20px)' }}>
+        <div className="header-inner">
+          {/* Left */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: C.text1, letterSpacing: '-0.4px' }}>
+                Dashboard
+              </h1>
+              <p style={{ fontSize: '10px', color: C.text3, margin: '2px 0 0', letterSpacing: '1.2px', textTransform: 'uppercase' }}>by nopal</p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+              onClick={handleRefresh} disabled={isLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 13px', borderRadius: '8px',
+                background: C.accentDim, border: `1px solid ${C.accentBdr}`,
+                color: C.text2, fontSize: '12px', fontWeight: 700,
+                cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1,
+                fontFamily: "'Inter', sans-serif", transition: 'all 0.2s', whiteSpace: 'nowrap',
+              }}>
+              <RefreshCw size={13} color={C.accent} className={isLoading ? 'spin' : ''} />
+              <span className="refresh-label">{isLoading ? 'Refreshing...' : 'Refresh'}</span>
+            </motion.button>
           </div>
-          <div className="flex items-center gap-3"> 
-            {/* Live indicator */}
-            <div className="flex items-center gap-2">
-              {isLoading ? (
-                <RefreshCw size={13} className="text-accent animate-spin" />
-              ) : (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                </span>
-              )}
-              <span className="text-xs text-white/30 hidden sm:inline">
-                {lastUpdated ? `Update ${lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Memuat...'}
+
+          {/* Right */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              {isLoading
+                ? <RefreshCw size={11} color={C.accent} className="spin" />
+                : (
+                  <span style={{ position: 'relative', display: 'inline-flex', width: '7px', height: '7px' }}>
+                    <span className="ping-dot" />
+                    <span style={{ position: 'relative', width: '7px', height: '7px', borderRadius: '50%', background: C.green, display: 'block' }} />
+                  </span>
+                )}
+              <span className="last-updated" style={{ fontSize: '11px', color: C.text3 }}>
+                {lastUpdated ? `${lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Memuat...'}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center shrink-0">
-              <span className="text-accent text-sm font-bold">
-                {(studentName || user?.name || 'S').charAt(0).toUpperCase()}
-              </span>
+            <div style={{
+              width: '33px', height: '33px', borderRadius: '50%',
+              background: C.accentDim, border: `1px solid ${C.accentBdr}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '13px', fontWeight: 800, color: C.accent, flexShrink: 0,
+            }}>
+              {(studentName || user?.name || 'S').charAt(0).toUpperCase()}
             </div>
-            <span className="text-sm font-medium text-white">
+            <span className="username-label" style={{ fontSize: '13px', fontWeight: 700, color: C.text1 }}>
               {studentName || user?.name || 'Student'}
             </span>
           </div>
         </div>
       </motion.div>
 
-      {/* Navigation tabs */}
+      {/* ── Tabs ── */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {[
-            { key: 'overview', label: 'Overview'    },
-            { key: 'income',   label: 'Pemasukan'   },
-            { key: 'expenses', label: 'Pengeluaran' },
-            { key: 'payments', label: 'Pembayaran'  },
-          ].map(({ key, label }) => (
-            <button key={key} onClick={() => setActiveTab(key)}
-              className={`px-5 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
-                activeTab === key ? 'bg-accent text-dark-primary' : 'glass hover:bg-white/10'
-              }`}>
+        style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px 16px 0' }}>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '2px' }}
+          className="tabs-row">
+          {tabs.map(({ key, label }) => (
+            <motion.button key={key} whileTap={{ scale: 0.96 }}
+              onClick={() => setActiveTab(key)}
+              style={{
+                padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Inter', sans-serif", transition: 'all 0.18s',
+                ...(activeTab === key
+                  ? { background: C.text1, color: C.bg, border: 'none' }
+                  : { background: 'transparent', color: C.text3, border: `1px solid ${C.border}` }),
+              }}>
               {label}
-            </button>
+            </motion.button>
           ))}
         </div>
       </motion.div>
 
-      {/* Main content */}
+      {/* ── Content ── */}
       <motion.div variants={containerVariants} initial="hidden" animate="visible"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-8">
+        style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 60px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', zIndex: 1 }}>
 
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
@@ -788,122 +640,74 @@ const handleRefresh = async () => {
               <NotificationCard studentId={studentId} />
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <motion.div variants={itemVariants}>
-                <DashboardCard icon={Wallet} title="Total Kas Kelas"
-                  value={`Rp ${totalCash.toLocaleString('id-ID')}`}
-                  subtext="Kas Akumulasi" accentColor="from-accent to-accent-light" />
-              </motion.div>
-              <motion.div variants={itemVariants}>
-                <DashboardCard icon={TrendingUp} title="Bank Mini"
-                  value={`Rp ${stats.miniBank.toLocaleString('id-ID')}`}
-                  subtext="Uang yang berada di bank mini" accentColor="from-green-500 to-emerald-500" />
-              </motion.div>
-              <motion.div variants={itemVariants}>
-                <DashboardCard icon={TrendingDown} title="Bendahara"
-                  value={`Rp ${stats.treasurer.toLocaleString('id-ID')}`}
-                  subtext="Uang di bendahara" accentColor="from-blue-500 to-cyan-500" />
-              </motion.div>
-            </div>
+            {/* Stat cards — responsive grid */}
+            <motion.div variants={itemVariants} className="stats-grid">
+              <StatCard icon={<Wallet size={16} color={C.orange} />} label="Total Kas Kelas"
+                value={`Rp ${totalCash.toLocaleString('id-ID')}`} sub="Kas akumulasi"
+                color={C.orange} dim={C.orangeDim} bdr={C.orangeBdr} />
+              <StatCard icon={<TrendingUp size={16} color={C.green} />} label="Bank Mini"
+                value={`Rp ${stats.miniBank.toLocaleString('id-ID')}`} sub="Uang di bank mini"
+                color={C.green} dim={C.greenDim} bdr={C.greenBdr} />
+              <StatCard icon={<TrendingDown size={16} color={C.blue} />} label="Bendahara"
+                value={`Rp ${stats.treasurer.toLocaleString('id-ID')}`} sub="Uang di bendahara"
+                color={C.blue} dim={C.blueDim} bdr={C.blueBdr} />
+            </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Bottom grid — stacks on mobile */}
+            <motion.div variants={itemVariants} className="bottom-grid">
 
-  {/* Pengeluaran terakhir */}
-  <motion.div variants={itemVariants}>
-    <div className="glass p-6 rounded-2xl h-full flex flex-col">
-      <h3 className="text-lg font-display font-bold text-white mb-4">
-        Pengeluaran Terakhir
-      </h3>
+              {/* Pengeluaran terakhir */}
+              <div style={{ ...glass }}>
+                <SectionHeader title="Pengeluaran Terakhir" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {expenses.slice(0, 5).map((e) => (
+                    <MiniRow key={e.id} name={e.name} sub={e.category}
+                      amount={`-Rp ${e.amount.toLocaleString('id-ID')}`} amountColor={C.orange} />
+                  ))}
+                </div>
+              </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-        {expenses.slice(0, 5).map((expense) => (
-          <div
-            key={expense.id}
-            className="flex items-center justify-between p-3 rounded-lg bg-white/5"
-          >
-            <div>
-              <p className="text-white font-medium">{expense.name}</p>
-              <p className="text-xs text-white/50">{expense.category}</p>
-            </div>
-            <p className="text-accent font-bold">
-              -Rp {expense.amount.toLocaleString('id-ID')}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </motion.div>
+              {/* Pemasukan terakhir */}
+              <div style={{ ...glass }}>
+                <SectionHeader title="Pemasukan Terakhir" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {incomes.slice(0, 5).map((i) => (
+                    <MiniRow key={i.id} name={i.name} sub={i.source}
+                      amount={`+Rp ${i.amount.toLocaleString('id-ID')}`} amountColor={C.green} />
+                  ))}
+                </div>
+              </div>
 
-  {/* Pemasukan terakhir */}
-  <motion.div variants={itemVariants}>
-    <div className="glass p-6 rounded-2xl h-full flex flex-col">
-      <h3 className="text-lg font-display font-bold text-white mb-4">
-        Pemasukan Terakhir
-      </h3>
-
-      <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-        {incomes.slice(0, 5).map((income) => (
-          <div
-            key={income.id}
-            className="flex items-center justify-between p-3 rounded-lg bg-white/5"
-          >
-            <div>
-              <p className="text-white font-medium">{income.name}</p>
-              <p className="text-xs text-white/50">{income.source}</p>
-            </div>
-            <p className="text-green-500 font-bold">
-              +Rp {income.amount.toLocaleString('id-ID')}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </motion.div>
-              <motion.div variants={itemVariants}>
-                <div className="glass p-6 rounded-2xl">
-                  <div className="flex items-center justify-between mb-4 gap-3">
-
-  <div>
-    <h3 className="text-lg font-display font-bold text-white">
-      Yang belum bayar
-    </h3>
-
-    <p className="text-xs text-white/40 mt-0.5">
-      {monthNames[selectedMonth - 1]} {selectedYear}
-    </p>
-  </div>
-
-  <select
-    value={selectedMonth}
-    onChange={(e) => setSelectedMonth(Number(e.target.value))}
-    className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-accent"
-  >
-    {monthNames.map((month, index) => (
-      <option
-        key={index}
-        value={index + 1}
-        className="bg-dark-secondary"
-      >
-        {month}
-      </option>
-    ))}
-  </select>
-</div>
-                  <div className="space-y-3 max-h-96 overflow-auto">
-                    {unpaidStudents.length > 0 ? (
-                      unpaidStudents.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                          <span className="text-white text-sm">{item.name}</span>
-                          <span className="px-2.5 py-1 bg-red-500/20 border border-red-500/50 text-red-200 text-xs rounded-full">❌ Unpaid</span>
+              {/* Yang belum bayar */}
+              <div style={{ ...glass }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px', gap: '10px', flexWrap: 'wrap' }}>
+                  <div>
+                    <SectionHeader title="Yang belum bayar" noMargin />
+                    <p style={{ fontSize: '11px', color: C.text3, margin: '3px 0 0' }}>{monthNames[selectedMonth - 1]} {selectedYear}</p>
+                  </div>
+                  <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
+                    style={{
+                      background: C.surface, border: `1px solid ${C.border}`, borderRadius: '8px',
+                      padding: '7px 10px', fontSize: '12px', color: C.text1, outline: 'none',
+                      cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 600,
+                    }}>
+                    {monthNames.map((m, i) => (
+                      <option key={i} value={i + 1} style={{ background: '#111' }}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
+                  {unpaidStudents.length > 0
+                    ? unpaidStudents.map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '9px', background: C.surface }}>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: C.text1 }}>{item.name}</span>
+                          <span style={{ padding: '3px 10px', background: C.redDim, border: `1px solid ${C.redBdr}`, color: C.red, borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>Belum Bayar</span>
                         </div>
                       ))
-                    ) : (
-                      <p className="text-white/50 text-sm text-center py-6">Semua Sudah bayar! ✅</p>
-                    )}
-                  </div>
+                    : <p style={{ fontSize: '13px', color: C.text3, textAlign: 'center', padding: '20px 0' }}>Semua sudah bayar ✅</p>}
                 </div>
-              </motion.div>
-            </div>
+              </div>
+            </motion.div>
 
             <motion.div variants={itemVariants}>
               <PaymentStatusTable payments={paymentStatus} isLoading={isLoading} />
@@ -914,25 +718,24 @@ const handleRefresh = async () => {
         {/* ── INCOME ── */}
         {activeTab === 'income' && (
           <motion.div variants={itemVariants}>
-            <div className="glass p-6 rounded-2xl">
-              <div className="flex items-center justify-between mb-6">
+            <div style={{ ...glass, padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
-                  <h2 className="text-2xl font-display font-bold text-white">Pemasukan</h2>
-                  <p className="text-sm text-white/50 mt-0.5">
-                    {incomes.length} transaksi •{' '}
-                    <span className="text-green-400">+Rp {totalIncome.toLocaleString('id-ID')}</span>
+                  <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text1, margin: 0 }}>Pemasukan</h2>
+                  <p style={{ fontSize: '12px', color: C.text3, margin: '4px 0 0' }}>
+                    {incomes.length} transaksi &bull; <span style={{ color: C.green, fontWeight: 700 }}>+Rp {totalIncome.toLocaleString('id-ID')}</span>
                   </p>
                 </div>
-                <div className="p-3 bg-green-500/10 rounded-xl">
-                  <ArrowUpCircle size={24} className="text-green-400" />
+                <div style={{ padding: '10px', background: C.greenDim, borderRadius: '12px' }}>
+                  <ArrowUpCircle size={20} color={C.green} />
                 </div>
               </div>
-              <div className="space-y-3 max-h-[600px] overflow-auto">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '600px', overflowY: 'auto' }}>
                 {isLoading
-                  ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-16 rounded-lg bg-white/5 animate-pulse" />)
+                  ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)
                   : incomes.length > 0
-                    ? incomes.map((income) => <IncomeRow key={income.id} income={income} onClick={setSelectedIncome} />)
-                    : <p className="text-white/40 text-sm text-center py-10">Belum ada data pemasukan.</p>}
+                    ? incomes.map(inc => <IncomeRow key={inc.id} income={inc} onClick={setSelectedIncome} />)
+                    : <EmptyState text="Belum ada data pemasukan." />}
               </div>
             </div>
           </motion.div>
@@ -941,25 +744,24 @@ const handleRefresh = async () => {
         {/* ── EXPENSES ── */}
         {activeTab === 'expenses' && (
           <motion.div variants={itemVariants}>
-            <div className="glass p-6 rounded-2xl">
-              <div className="flex items-center justify-between mb-6">
+            <div style={{ ...glass, padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
-                  <h2 className="text-2xl font-display font-bold text-white">Pengeluaran</h2>
-                  <p className="text-sm text-white/50 mt-0.5">
-                    {expenses.length} transaksi •{' '}
-                    <span className="text-accent">-Rp {totalExpense.toLocaleString('id-ID')}</span>
+                  <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text1, margin: 0 }}>Pengeluaran</h2>
+                  <p style={{ fontSize: '12px', color: C.text3, margin: '4px 0 0' }}>
+                    {expenses.length} transaksi &bull; <span style={{ color: C.orange, fontWeight: 700 }}>-Rp {totalExpense.toLocaleString('id-ID')}</span>
                   </p>
                 </div>
-                <div className="p-3 bg-accent/10 rounded-xl">
-                  <ArrowDownCircle size={24} className="text-accent" />
+                <div style={{ padding: '10px', background: C.orangeDim, borderRadius: '12px' }}>
+                  <ArrowDownCircle size={20} color={C.orange} />
                 </div>
               </div>
-              <div className="space-y-3 max-h-[600px] overflow-auto">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '600px', overflowY: 'auto' }}>
                 {isLoading
-                  ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-16 rounded-lg bg-white/5 animate-pulse" />)
+                  ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)
                   : expenses.length > 0
-                    ? expenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onClick={setSelectedExpense} />)
-                    : <p className="text-white/40 text-sm text-center py-10">Belum ada data pengeluaran.</p>}
+                    ? expenses.map(exp => <ExpenseRow key={exp.id} expense={exp} onClick={setSelectedExpense} />)
+                    : <EmptyState text="Belum ada data pengeluaran." />}
               </div>
             </div>
           </motion.div>
@@ -973,15 +775,109 @@ const handleRefresh = async () => {
         )}
       </motion.div>
 
-      {/* ── INCOME MODAL ── */}
-      {selectedIncome && (
-        <IncomeDetailModal income={selectedIncome} onClose={() => setSelectedIncome(null)} />
-      )}
+      {selectedIncome  && <IncomeDetailModal  income={selectedIncome}   onClose={() => setSelectedIncome(null)}  />}
+      {selectedExpense && <ExpenseDetailModal expense={selectedExpense} onClose={() => setSelectedExpense(null)} />}
 
-      {/* ── EXPENSE MODAL ── */}
-      {selectedExpense && (
-        <ExpenseDetailModal expense={selectedExpense} onClose={() => setSelectedExpense(null)} />
-      )}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        * { box-sizing: border-box; }
+
+        @keyframes spin  { to { transform: rotate(360deg); } }
+        @keyframes ping  { 0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.7);opacity:0} }
+        @keyframes pulse { 0%,100%{opacity:.3}50%{opacity:.6} }
+
+        .spin { animation: spin 1s linear infinite; }
+
+        .ping-dot {
+          position: absolute; inset: 0; border-radius: 50%;
+          background: ${C.green}; opacity: .7;
+          animation: ping 1.6s ease-in-out infinite;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: ${C.borderStr}; border-radius: 4px; }
+
+        /* Header inner */
+        .header-inner {
+          max-width: 1280px; margin: 0 auto;
+          padding: 14px 16px;
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        }
+
+        /* Stats grid — 3 col desktop, 1 col mobile */
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+
+        /* Bottom grid — 3 col desktop, 1 col mobile */
+        .bottom-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+
+        /* Tabs — no scrollbar visible */
+        .tabs-row { -ms-overflow-style: none; scrollbar-width: none; }
+        .tabs-row::-webkit-scrollbar { display: none; }
+
+        /* Notif inner */
+        .notif-inner {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        }
+
+        /* Modal — center on desktop, bottom sheet on mobile */
+        @media (min-width: 600px) {
+          .modal-wrapper { align-items: center !important; padding: 16px !important; }
+          .modal-card { border-radius: 20px !important; }
+        }
+
+        @media (max-width: 768px) {
+          .stats-grid  { grid-template-columns: 1fr; }
+          .bottom-grid { grid-template-columns: 1fr; }
+          .username-label { display: none; }
+          .last-updated { display: none; }
+          .refresh-label { display: none; }
+        }
+
+        @media (max-width: 480px) {
+          .header-inner { padding: 12px 14px; }
+          .notif-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+        }
+      `}</style>
     </div>
   )
+}
+
+// ─── Tiny shared components ────────────────────────────────────────────────────
+function SectionHeader({ title, noMargin }) {
+  return (
+    <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text1, margin: noMargin ? 0 : '0 0 14px', letterSpacing: '-0.1px' }}>
+      {title}
+    </h3>
+  )
+}
+
+function MiniRow({ name, sub, amount, amountColor }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '9px', background: C.surface }}>
+      <div style={{ minWidth: 0, marginRight: '10px' }}>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: C.text1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+        {sub && <p style={{ fontSize: '11px', color: C.text3, margin: '1px 0 0' }}>{sub}</p>}
+      </div>
+      <p style={{ fontSize: '13px', fontWeight: 800, color: amountColor, margin: 0, flexShrink: 0 }}>{amount}</p>
+    </div>
+  )
+}
+
+function Skeleton() {
+  return <div style={{ height: '60px', borderRadius: '12px', background: C.surface, animation: 'pulse 1.5s ease-in-out infinite' }} />
+}
+
+function EmptyState({ text }) {
+  return <p style={{ fontSize: '13px', color: C.text3, textAlign: 'center', padding: '36px 0' }}>{text}</p>
 }

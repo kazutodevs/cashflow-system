@@ -100,7 +100,7 @@ export default function LoginPage() {
               CashFlow Login
             </h1>
             <p className="text-sm text-white/60">
-              X TKJ A Management System
+              XI TKJ A Management System
             </p>
           </div>
 
