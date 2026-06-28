@@ -1153,8 +1153,8 @@ export default function AdminDashboard() {
         {activeTab === 'payments' && paymentSelection.selectedCount > 0 && (
           <motion.div
             initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            style={{
-              position: 'fixed', inset: '0 0 auto', bottom: 0, zIndex: 50,
+style={{
+  position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50,
               background: 'rgba(20,20,20,0.97)', borderTop: `1px solid ${T.orangeBdr}`,
               backdropFilter: 'blur(16px)', padding: '14px 20px', paddingBottom: 'env(safe-area-inset-bottom, 14px)',
             }}
