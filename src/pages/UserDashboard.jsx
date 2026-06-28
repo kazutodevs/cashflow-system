@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp, TrendingDown, Wallet, ArrowDownCircle, ArrowUpCircle,
   ExternalLink, Bell, BellOff, BellRing, CheckCircle2, XCircle, Loader2,
-  RefreshCw, FileText, Tag,
+  RefreshCw, FileText, Tag, LayoutDashboard, CreditCard,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
@@ -58,10 +58,10 @@ const C = {
   surfaceHov: 'rgba(255,255,255,0.07)',
   border:     'rgba(255,255,255,0.09)',
   borderStr:  'rgba(255,255,255,0.16)',
-  text1:      '#f0f0f0',          // brighter primary
-  text2:      'rgba(240,240,240,0.65)', // brighter secondary
-  text3:      'rgba(240,240,240,0.38)', // muted
-  accent:     '#8b5cf6',          // soft purple accent only
+  text1:      '#f0f0f0',
+  text2:      'rgba(240,240,240,0.65)',
+  text3:      'rgba(240,240,240,0.38)',
+  accent:     '#8b5cf6',
   accentDim:  'rgba(139,92,246,0.12)',
   accentBdr:  'rgba(139,92,246,0.25)',
   green:      '#4ade80',
@@ -432,6 +432,14 @@ function StatCard({ icon, label, value, sub, color, dim, bdr }) {
   )
 }
 
+// ─── Tab config ────────────────────────────────────────────────────────────────
+const TABS = [
+  { key: 'overview',  label: 'Overview',    icon: LayoutDashboard },
+  { key: 'income',    label: 'Pemasukan',   icon: TrendingUp      },
+  { key: 'expenses',  label: 'Pengeluaran', icon: TrendingDown    },
+  { key: 'payments',  label: 'Pembayaran',  icon: CreditCard      },
+]
+
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export default function UserDashboard() {
   const navigate = useNavigate()
@@ -451,12 +459,13 @@ export default function UserDashboard() {
   const [selectedExpense, setSelectedExpense] = useState(null)
   const [lastUpdated, setLastUpdated]         = useState(null)
   const [toast, setToast]                     = useState(null)
-  // Income table
-const [incomeSearch, setIncomeSearch] = useState("")
-const [incomeRowsPerPage, setIncomeRowsPerPage] = useState(10)
-const [incomePage, setIncomePage] = useState(1)
-  const currentDate = new Date()
 
+  // Income table
+  const [incomeSearch, setIncomeSearch]         = useState('')
+  const [incomeRowsPerPage, setIncomeRowsPerPage] = useState(10)
+  const [incomePage, setIncomePage]             = useState(1)
+
+  const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear]   = useState(currentDate.getFullYear())
 
@@ -522,41 +531,27 @@ const [incomePage, setIncomePage] = useState(1)
 
   const totalCash    = incomes.reduce((s, r) => s + (r.amount ?? 0), 0) - expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
   const totalIncome  = incomes.reduce((s, r) => s + (r.amount ?? 0), 0)
-  // ===============================
-// Income Filter + Pagination
-// ===============================
-const filteredIncome = incomes.filter((item) => {
-  const keyword = incomeSearch.toLowerCase()
-
-  return (
-    item.name?.toLowerCase().includes(keyword) ||
-    item.source?.toLowerCase().includes(keyword) ||
-    item.description?.toLowerCase().includes(keyword)
-  )
-})
-
-const totalIncomePages = Math.ceil(
-  filteredIncome.length / incomeRowsPerPage
-)
-
-const paginatedIncome = filteredIncome.slice(
-  (incomePage - 1) * incomeRowsPerPage,
-  incomePage * incomeRowsPerPage
-)
-
-useEffect(() => {
-  setIncomePage(1)
-}, [incomeSearch, incomeRowsPerPage])
   const totalExpense = expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
 
-  const handleLogout = () => { logout(); navigate('/login') }
+  // Income filter + pagination
+  const filteredIncome = incomes.filter((item) => {
+    const keyword = incomeSearch.toLowerCase()
+    return (
+      item.name?.toLowerCase().includes(keyword) ||
+      item.source?.toLowerCase().includes(keyword) ||
+      item.description?.toLowerCase().includes(keyword)
+    )
+  })
 
-  const tabs = [
-    { key: 'overview', label: 'Overview'    },
-    { key: 'income',   label: 'Pemasukan'   },
-    { key: 'expenses', label: 'Pengeluaran' },
-    { key: 'payments', label: 'Pembayaran'  },
-  ]
+  const totalIncomePages = Math.ceil(filteredIncome.length / incomeRowsPerPage)
+  const paginatedIncome  = filteredIncome.slice(
+    (incomePage - 1) * incomeRowsPerPage,
+    incomePage * incomeRowsPerPage
+  )
+
+  useEffect(() => { setIncomePage(1) }, [incomeSearch, incomeRowsPerPage])
+
+  const handleLogout = () => { logout(); navigate('/login') }
 
   const containerVariants = {
     hidden:  { opacity: 0 },
@@ -570,7 +565,7 @@ useEffect(() => {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Inter', sans-serif", position: 'relative', overflowX: 'hidden' }}>
 
-      {/* Subtle purple glow — far background only */}
+      {/* Subtle purple glow */}
       <div style={{ position: 'fixed', top: '-120px', right: '-120px', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
       <div style={{ position: 'fixed', bottom: '5%', left: '-80px', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
 
@@ -637,12 +632,12 @@ useEffect(() => {
         </div>
       </motion.div>
 
-      {/* ── Tabs ── */}
+      {/* ── Desktop Tabs ── */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
         style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px 16px 0' }}>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '2px' }}
           className="tabs-row">
-          {tabs.map(({ key, label }) => (
+          {TABS.map(({ key, label }) => (
             <motion.button key={key} whileTap={{ scale: 0.96 }}
               onClick={() => setActiveTab(key)}
               style={{
@@ -659,8 +654,13 @@ useEffect(() => {
       </motion.div>
 
       {/* ── Content ── */}
-      <motion.div variants={containerVariants} initial="hidden" animate="visible"
-        style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 60px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', zIndex: 1 }}>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="content-wrapper"
+        style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 60px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', zIndex: 1 }}
+      >
 
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
@@ -669,7 +669,6 @@ useEffect(() => {
               <NotificationCard studentId={studentId} />
             </motion.div>
 
-            {/* Stat cards — responsive grid */}
             <motion.div variants={itemVariants} className="stats-grid">
               <StatCard icon={<Wallet size={16} color={C.orange} />} label="Total Kas Kelas"
                 value={`Rp ${totalCash.toLocaleString('id-ID')}`} sub="Kas akumulasi"
@@ -682,11 +681,9 @@ useEffect(() => {
                 color={C.blue} dim={C.blueDim} bdr={C.blueBdr} />
             </motion.div>
 
-            {/* Bottom grid — stacks on mobile */}
             <motion.div variants={itemVariants} className="bottom-grid">
-
               {/* Pengeluaran terakhir */}
-              <div style={{ ...glass }}>
+              <div style={{ ...glass, padding: '18px 20px' }}>
                 <SectionHeader title="Pengeluaran Terakhir" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {expenses.slice(0, 5).map((e) => (
@@ -697,7 +694,7 @@ useEffect(() => {
               </div>
 
               {/* Pemasukan terakhir */}
-              <div style={{ ...glass }}>
+              <div style={{ ...glass, padding: '18px 20px' }}>
                 <SectionHeader title="Pemasukan Terakhir" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {incomes.slice(0, 5).map((i) => (
@@ -708,7 +705,7 @@ useEffect(() => {
               </div>
 
               {/* Yang belum bayar */}
-              <div style={{ ...glass }}>
+              <div style={{ ...glass, padding: '18px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px', gap: '10px', flexWrap: 'wrap' }}>
                   <div>
                     <SectionHeader title="Yang belum bayar" noMargin />
@@ -747,198 +744,89 @@ useEffect(() => {
         {/* ── INCOME ── */}
         {activeTab === 'income' && (
           <motion.div variants={itemVariants}>
-<div style={{ ...glass, padding: '20px' }}>
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '20px',
-      flexWrap: 'wrap',
-      gap: '12px'
-    }}
-  >
-    <div>
-      <h2
-        style={{
-          fontSize: '20px',
-          fontWeight: 900,
-          color: C.text1,
-          margin: 0
-        }}
-      >
-        Pemasukan
-      </h2>
+            <div style={{ ...glass, padding: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text1, margin: 0 }}>Pemasukan</h2>
+                  <p style={{ fontSize: '12px', color: C.text3, marginTop: '4px' }}>
+                    {filteredIncome.length} transaksi •
+                    <span style={{ color: C.green, fontWeight: 700, marginLeft: 4 }}>
+                      +Rp {totalIncome.toLocaleString('id-ID')}
+                    </span>
+                  </p>
+                </div>
+                <div style={{ padding: '10px', background: C.greenDim, borderRadius: '12px' }}>
+                  <ArrowUpCircle size={20} color={C.green} />
+                </div>
+              </div>
 
-      <p
-        style={{
-          fontSize: '12px',
-          color: C.text3,
-          marginTop: '4px'
-        }}
-      >
-        {filteredIncome.length} transaksi •
-        <span
-          style={{
-            color: C.green,
-            fontWeight: 700,
-            marginLeft: 4
-          }}
-        >
-          +Rp {totalIncome.toLocaleString('id-ID')}
-        </span>
-      </p>
-    </div>
+              {/* Toolbar */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+                <input
+                  placeholder="Cari pemasukan..."
+                  value={incomeSearch}
+                  onChange={(e) => setIncomeSearch(e.target.value)}
+                  style={{
+                    flex: 1, minWidth: 220, padding: '10px 14px', borderRadius: '10px',
+                    border: `1px solid ${C.border}`, background: C.surface, color: C.text1,
+                    outline: 'none', fontFamily: "'Inter', sans-serif",
+                  }}
+                />
+                <select
+                  value={incomeRowsPerPage}
+                  onChange={(e) => setIncomeRowsPerPage(Number(e.target.value))}
+                  style={{
+                    padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                    background: C.surface, color: C.text1, fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
 
-    <div
-      style={{
-        padding: '10px',
-        background: C.greenDim,
-        borderRadius: '12px'
-      }}
-    >
-      <ArrowUpCircle size={20} color={C.green} />
-    </div>
-  </div>
+              {/* List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '600px', overflowY: 'auto' }}>
+                {isLoading
+                  ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)
+                  : paginatedIncome.length > 0
+                    ? paginatedIncome.map((income) => <IncomeRow key={income.id} income={income} onClick={setSelectedIncome} />)
+                    : <EmptyState text="Data tidak ditemukan." />}
+              </div>
 
-  {/* Toolbar */}
-  <div
-    style={{
-      display: 'flex',
-      gap: '10px',
-      marginBottom: '18px',
-      flexWrap: 'wrap'
-    }}
-  >
-    <input
-      placeholder="Cari pemasukan..."
-      value={incomeSearch}
-      onChange={(e) => setIncomeSearch(e.target.value)}
-      style={{
-        flex: 1,
-        minWidth: 220,
-        padding: '10px 14px',
-        borderRadius: '10px',
-        border: `1px solid ${C.border}`,
-        background: C.surface,
-        color: C.text1,
-        outline: 'none',
-        fontFamily: "'Inter', sans-serif"
-      }}
-    />
-
-    <select
-      value={incomeRowsPerPage}
-      onChange={(e) =>
-        setIncomeRowsPerPage(Number(e.target.value))
-      }
-      style={{
-        padding: '10px',
-        borderRadius: '10px',
-        border: `1px solid ${C.border}`,
-        background: C.surface,
-        color: C.text1,
-        fontFamily: "'Inter', sans-serif"
-      }}
-    >
-      <option value={10}>10</option>
-      <option value={25}>25</option>
-      <option value={50}>50</option>
-      <option value={100}>100</option>
-    </select>
-  </div>
-
-  {/* Table */}
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px',
-      maxHeight: '600px',
-      overflowY: 'auto'
-    }}
-  >
-    {isLoading ? (
-      Array.from({ length: 4 }).map((_, i) => (
-        <Skeleton key={i} />
-      ))
-    ) : paginatedIncome.length > 0 ? (
-      paginatedIncome.map((income) => (
-        <IncomeRow
-          key={income.id}
-          income={income}
-          onClick={setSelectedIncome}
-        />
-      ))
-    ) : (
-      <EmptyState text="Data tidak ditemukan." />
-    )}
-  </div>
-
-  {/* Pagination */}
-  {!isLoading && totalIncomePages > 1 && (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: '20px'
-      }}
-    >
-      <button
-        disabled={incomePage === 1}
-        onClick={() => setIncomePage((p) => p - 1)}
-        style={{
-          padding: '10px 16px',
-          borderRadius: '10px',
-          border: `1px solid ${C.border}`,
-          background:
-            incomePage === 1 ? C.surface : C.greenDim,
-          color:
-            incomePage === 1 ? C.text3 : C.green,
-          cursor:
-            incomePage === 1 ? 'not-allowed' : 'pointer'
-        }}
-      >
-        Prev
-      </button>
-
-      <span
-        style={{
-          color: C.text2,
-          fontSize: '13px',
-          fontWeight: 600
-        }}
-      >
-        Halaman {incomePage} dari {totalIncomePages}
-      </span>
-
-      <button
-        disabled={incomePage === totalIncomePages}
-        onClick={() => setIncomePage((p) => p + 1)}
-        style={{
-          padding: '10px 16px',
-          borderRadius: '10px',
-          border: `1px solid ${C.border}`,
-          background:
-            incomePage === totalIncomePages
-              ? C.surface
-              : C.greenDim,
-          color:
-            incomePage === totalIncomePages
-              ? C.text3
-              : C.green,
-          cursor:
-            incomePage === totalIncomePages
-              ? 'not-allowed'
-              : 'pointer'
-        }}
-      >
-        Next
-      </button>
-    </div>
-  )}
-</div>
+              {/* Pagination */}
+              {!isLoading && totalIncomePages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
+                  <button
+                    disabled={incomePage === 1}
+                    onClick={() => setIncomePage((p) => p - 1)}
+                    style={{
+                      padding: '10px 16px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                      background: incomePage === 1 ? C.surface : C.greenDim,
+                      color: incomePage === 1 ? C.text3 : C.green,
+                      cursor: incomePage === 1 ? 'not-allowed' : 'pointer',
+                      fontFamily: "'Inter', sans-serif", fontWeight: 700,
+                    }}
+                  >Prev</button>
+                  <span style={{ color: C.text2, fontSize: '13px', fontWeight: 600 }}>
+                    Halaman {incomePage} dari {totalIncomePages}
+                  </span>
+                  <button
+                    disabled={incomePage === totalIncomePages}
+                    onClick={() => setIncomePage((p) => p + 1)}
+                    style={{
+                      padding: '10px 16px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                      background: incomePage === totalIncomePages ? C.surface : C.greenDim,
+                      color: incomePage === totalIncomePages ? C.text3 : C.green,
+                      cursor: incomePage === totalIncomePages ? 'not-allowed' : 'pointer',
+                      fontFamily: "'Inter', sans-serif", fontWeight: 700,
+                    }}
+                  >Next</button>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -975,6 +863,92 @@ useEffect(() => {
           </motion.div>
         )}
       </motion.div>
+
+      {/* ── Mobile Bottom Navigation ── */}
+      <div className="bottom-nav">
+        {TABS.map(({ key, label, icon: Icon }) => {
+          const isActive = activeTab === key
+          const iconColor = isActive
+            ? key === 'income'   ? C.green
+            : key === 'expenses' ? C.orange
+            : key === 'payments' ? C.blue
+            : C.accent
+            : C.text3
+
+          return (
+            <motion.button
+              key={key}
+              whileTap={{ scale: 0.86 }}
+              onClick={() => setActiveTab(key)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px',
+                padding: '10px 4px 6px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif",
+                position: 'relative',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {/* Active top bar indicator */}
+              <AnimatePresence>
+                {isActive && (
+                  <motion.div
+                    layoutId="bottom-nav-indicator"
+                    initial={{ opacity: 0, scaleX: 0 }}
+                    animate={{ opacity: 1, scaleX: 1 }}
+                    exit={{ opacity: 0, scaleX: 0 }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '32px',
+                      height: '2px',
+                      borderRadius: '0 0 4px 4px',
+                      background: iconColor,
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* Icon with active bg pill */}
+              <motion.div
+                animate={{
+                  background: isActive ? `${iconColor}18` : 'transparent',
+                  scale: isActive ? 1 : 0.9,
+                }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon size={20} color={iconColor} strokeWidth={isActive ? 2.5 : 1.8} />
+              </motion.div>
+
+              <span style={{
+                fontSize: '10px',
+                fontWeight: isActive ? 800 : 500,
+                color: iconColor,
+                transition: 'color 0.2s, font-weight 0.2s',
+                letterSpacing: '0.1px',
+              }}>
+                {label}
+              </span>
+            </motion.button>
+          )
+        })}
+      </div>
 
       {selectedIncome  && <IncomeDetailModal  income={selectedIncome}   onClose={() => setSelectedIncome(null)}  />}
       {selectedExpense && <ExpenseDetailModal expense={selectedExpense} onClose={() => setSelectedExpense(null)} />}
@@ -1037,12 +1011,39 @@ useEffect(() => {
           .modal-card { border-radius: 20px !important; }
         }
 
+        /* Bottom nav — hidden on desktop */
+        .bottom-nav {
+          display: none;
+        }
+
+        /* ── Mobile ── */
         @media (max-width: 768px) {
           .stats-grid  { grid-template-columns: 1fr; }
           .bottom-grid { grid-template-columns: 1fr; }
           .username-label { display: none; }
           .last-updated { display: none; }
           .refresh-label { display: none; }
+
+          /* Hide top tabs on mobile */
+          .tabs-row { display: none !important; }
+
+          /* Content padding so last item isn't hidden behind bottom nav */
+          .content-wrapper { padding-bottom: 90px !important; }
+
+          /* Show bottom nav */
+          .bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 40;
+            background: rgba(10, 10, 10, 0.96);
+            border-top: 1px solid ${C.border};
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+          }
         }
 
         @media (max-width: 480px) {
