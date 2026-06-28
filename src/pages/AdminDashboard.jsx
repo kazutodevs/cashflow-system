@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LogOut, Plus, Trash2, Pencil, X, Check, Wallet, TrendingUp, TrendingDown,
   Receipt, Tag, FileText, Image as ImageIcon, Save, Bell, Send, Loader2,
-  RefreshCw,
+  RefreshCw, LayoutDashboard, CreditCard, ChevronLeft, ChevronRight, Search,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
@@ -13,10 +13,66 @@ import ExpenseForm from '../components/ExpenseForm'
 import IncomeForm from '../components/IncomeForm'
 import StudentPaymentManager from '../components/StudentPaymentManager'
 
-// ─── Helper ────────────────────────────────────────────────────────────────────
+// ─── Design tokens — black / white / orange minimalist ────────────────────────
+const T = {
+  bg:        '#0c0c0c',
+  bg2:       '#141414',
+  bg3:       '#1c1c1c',
+  border:    'rgba(255,255,255,0.08)',
+  borderMd:  'rgba(255,255,255,0.14)',
+  text1:     '#f5f5f5',
+  text2:     'rgba(245,245,245,0.55)',
+  text3:     'rgba(245,245,245,0.28)',
+  orange:    '#f97316',
+  orangeD:   'rgba(249,115,22,0.12)',
+  orangeBdr: 'rgba(249,115,22,0.28)',
+  green:     '#4ade80',
+  greenD:    'rgba(74,222,128,0.10)',
+  greenBdr:  'rgba(74,222,128,0.22)',
+  red:       '#f87171',
+  redD:      'rgba(248,113,113,0.10)',
+  redBdr:    'rgba(248,113,113,0.22)',
+  blue:      '#60a5fa',
+  blueD:     'rgba(96,165,250,0.10)',
+  blueBdr:   'rgba(96,165,250,0.22)',
+}
+
+const card = {
+  background:   T.bg2,
+  border:       `1px solid ${T.border}`,
+  borderRadius: '12px',
+}
+
+const input = {
+  background:   T.bg3,
+  border:       `1px solid ${T.border}`,
+  borderRadius: '8px',
+  color:        T.text1,
+  outline:      'none',
+  fontFamily:   "'Inter', sans-serif",
+  fontSize:     '13px',
+  padding:      '9px 13px',
+  width:        '100%',
+  boxSizing:    'border-box',
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 const calcTotalCash = (incomes = [], expenses = []) =>
   incomes.reduce((s, r) => s + (r.amount ?? 0), 0) -
   expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
+
+const monthNames = [
+  'Januari','Februari','Maret','April','Mei','Juni',
+  'Juli','Agustus','September','Oktober','November','Desember',
+]
+
+// ─── Tab config ────────────────────────────────────────────────────────────────
+const TABS = [
+  { key: 'overview',  label: 'Overview',    icon: LayoutDashboard },
+  { key: 'expenses',  label: 'Pengeluaran', icon: TrendingDown    },
+  { key: 'income',    label: 'Pemasukan',   icon: TrendingUp      },
+  { key: 'payments',  label: 'Pembayaran',  icon: CreditCard      },
+]
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ message, onDone }) {
@@ -31,13 +87,184 @@ function Toast({ message, onDone }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 12, scale: 0.95 }}
       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-2xl border border-green-500/30 bg-dark-secondary/95 backdrop-blur-md"
+      style={{
+        position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 9999, display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '12px 20px', borderRadius: '14px',
+        background: T.bg2, border: `1px solid ${T.greenBdr}`,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap',
+      }}
     >
-      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500/20 shrink-0">
-        <Check size={14} className="text-green-400" />
+      <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: T.greenD, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Check size={13} color={T.green} />
       </span>
-      <span className="text-sm font-medium text-white">{message}</span>
+      <span style={{ fontSize: '13px', fontWeight: 600, color: T.text1 }}>{message}</span>
     </motion.div>
+  )
+}
+
+// ─── Pagination Controls ───────────────────────────────────────────────────────
+function Pagination({ page, total, onPrev, onNext }) {
+  if (total <= 1) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', gap: '12px' }}>
+      <button
+        disabled={page === 1}
+        onClick={onPrev}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
+          borderRadius: '8px', border: `1px solid ${T.border}`, background: page === 1 ? T.bg3 : T.orangeD,
+          color: page === 1 ? T.text3 : T.orange, cursor: page === 1 ? 'not-allowed' : 'pointer',
+          fontSize: '12px', fontWeight: 700, fontFamily: "'Inter', sans-serif",
+        }}
+      >
+        <ChevronLeft size={14} /> Prev
+      </button>
+      <span style={{ fontSize: '12px', color: T.text2, fontWeight: 600 }}>
+        Hal. {page} / {total}
+      </span>
+      <button
+        disabled={page === total}
+        onClick={onNext}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
+          borderRadius: '8px', border: `1px solid ${T.border}`, background: page === total ? T.bg3 : T.orangeD,
+          color: page === total ? T.text3 : T.orange, cursor: page === total ? 'not-allowed' : 'pointer',
+          fontSize: '12px', fontWeight: 700, fontFamily: "'Inter', sans-serif",
+        }}
+      >
+        Next <ChevronRight size={14} />
+      </button>
+    </div>
+  )
+}
+
+// ─── Search + Rows-per-page toolbar ───────────────────────────────────────────
+function TableToolbar({ search, onSearch, rowsPerPage, onRowsPerPage, placeholder }) {
+  return (
+    <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+      <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+        <Search size={14} color={T.text3} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+        <input
+          value={search}
+          onChange={e => onSearch(e.target.value)}
+          placeholder={placeholder || 'Cari...'}
+          style={{ ...input, paddingLeft: '36px' }}
+        />
+      </div>
+      <select
+        value={rowsPerPage}
+        onChange={e => onRowsPerPage(Number(e.target.value))}
+        style={{ ...input, width: 'auto', minWidth: '80px', cursor: 'pointer' }}
+      >
+        {[10, 25, 50, 100].map(n => <option key={n} value={n} style={{ background: T.bg2 }}>{n}</option>)}
+      </select>
+    </div>
+  )
+}
+
+// ─── Section label ──────────────────────────────────────────────────────────────
+function Label({ children }) {
+  return (
+    <p style={{ fontSize: '10px', fontWeight: 700, color: T.text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+      {children}
+    </p>
+  )
+}
+
+// ─── Pill tag ──────────────────────────────────────────────────────────────────
+function Pill({ color, dim, bdr, children }) {
+  return (
+    <span style={{ display: 'inline-block', padding: '2px 10px', background: dim, border: `1px solid ${bdr}`, color, borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>
+      {children}
+    </span>
+  )
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function Skeleton() {
+  return (
+    <div style={{ height: '58px', borderRadius: '10px', background: T.bg3, animation: 'pulse 1.5s ease-in-out infinite' }} />
+  )
+}
+
+// ─── Stat / Editable cards ─────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, sub, accentColor, accentDim, accentBdr }) {
+  return (
+    <div style={{ ...card, padding: '20px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: accentColor }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ padding: '8px', borderRadius: '9px', background: accentDim }}>
+          <Icon size={18} color={accentColor} />
+        </div>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: T.text3, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{label}</span>
+      </div>
+      <p style={{ fontSize: '22px', fontWeight: 900, color: T.text1, margin: 0 }}>{value}</p>
+      <p style={{ fontSize: '11px', color: T.text3, margin: '5px 0 0' }}>{sub}</p>
+    </div>
+  )
+}
+
+function EditableCard({ icon: Icon, label, value, sub, accentColor, accentDim, accentBdr, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft]     = useState('')
+  const [saving, setSaving]   = useState(false)
+
+  const startEdit = () => { setDraft(String(value)); setEditing(true) }
+  const cancel    = () => setEditing(false)
+  const save = async () => {
+    const num = parseFloat(String(draft).replace(/[^0-9.-]/g, ''))
+    if (isNaN(num)) return
+    setSaving(true)
+    await onSave(num)
+    setSaving(false)
+    setEditing(false)
+  }
+
+  return (
+    <div style={{ ...card, padding: '20px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: accentColor }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ padding: '8px', borderRadius: '9px', background: accentDim }}>
+            <Icon size={18} color={accentColor} />
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: T.text3, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{label}</span>
+        </div>
+        {!editing ? (
+          <motion.button whileTap={{ scale: 0.9 }} onClick={startEdit}
+            style={{ padding: '6px', borderRadius: '7px', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}>
+            <Pencil size={14} color={T.text3} />
+          </motion.button>
+        ) : (
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={cancel}
+              style={{ padding: '6px', borderRadius: '7px', background: T.bg3, border: 'none', cursor: 'pointer', display: 'flex' }}>
+              <X size={14} color={T.text2} />
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={save} disabled={saving}
+              style={{ padding: '6px', borderRadius: '7px', background: T.greenD, border: 'none', cursor: 'pointer', display: 'flex', opacity: saving ? 0.5 : 1 }}>
+              <Check size={14} color={T.green} />
+            </motion.button>
+          </div>
+        )}
+      </div>
+      <AnimatePresence mode="wait">
+        {editing ? (
+          <motion.input key="inp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            type="number" value={draft} onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
+            autoFocus style={{ ...input, fontSize: '18px', fontWeight: 800 }} />
+        ) : (
+          <motion.p key="val" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ fontSize: '22px', fontWeight: 900, color: T.text1, margin: 0 }}>
+            Rp {Number(value).toLocaleString('id-ID')}
+          </motion.p>
+        )}
+      </AnimatePresence>
+      <p style={{ fontSize: '11px', color: T.text3, margin: '6px 0 0' }}>{sub}</p>
+    </div>
   )
 }
 
@@ -59,121 +286,93 @@ function ExpenseDetailModal({ expense, onClose, onUpdate }) {
     setIsEditing(false)
   }
 
-  const handleCancel = () => {
-    setDraft({ name: expense.name || '', description: expense.description || '', category: expense.category || '', amount: expense.amount ?? 0 })
-    setIsEditing(false)
-  }
-
   return (
     <AnimatePresence>
-      <motion.div key="exp-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-      <motion.div key="exp-modal"
-        initial={{ opacity: 0, scale: 0.92, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 24 }} transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-lg glass rounded-2xl overflow-hidden shadow-2xl"
-          onClick={(e) => e.stopPropagation()}>
-
-          {/* Header */}
-          <div className="relative px-6 pt-6 pb-4 border-b border-white/10">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent-light" />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-accent/20">
-                  <Receipt size={20} className="text-accent" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-display font-bold text-white">Detail Pengeluaran</h2>
-                  <p className="text-xs text-white/40">
-                    {expense.created_at
-                      ? new Date(expense.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                      : '-'}
-                  </p>
-                </div>
+      <motion.div key="bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} />
+      <motion.div key="md" initial={{ opacity: 0, scale: 0.93, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93, y: 24 }} transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+        style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', pointerEvents: 'none' }}>
+        <div onClick={e => e.stopPropagation()}
+          style={{ pointerEvents: 'auto', width: '100%', maxWidth: '500px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+          {/* header */}
+          <div style={{ position: 'relative', padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: T.orange }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', background: T.orangeD, borderRadius: '9px' }}>
+                <Receipt size={18} color={T.orange} />
               </div>
-              <div className="flex items-center gap-2">
-                {isEditing ? (
-                  <>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={handleCancel} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                      <X size={16} className="text-white/50" />
-                    </motion.button>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={handleSave} disabled={saving}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-dark-primary rounded-lg text-sm font-bold hover:opacity-90 disabled:opacity-50">
-                      <Save size={14} />{saving ? 'Menyimpan...' : 'Simpan'}
-                    </motion.button>
-                  </>
-                ) : (
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 glass hover:bg-white/10 rounded-lg text-sm font-medium">
-                    <Pencil size={14} className="text-accent" /><span className="text-white/80">Edit</span>
+              <div>
+                <p style={{ fontWeight: 800, fontSize: '15px', color: T.text1, margin: 0 }}>Detail Pengeluaran</p>
+                <p style={{ fontSize: '11px', color: T.text3, margin: '2px 0 0' }}>
+                  {expense.created_at ? new Date(expense.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {isEditing ? (
+                <>
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditing(false)}
+                    style={{ padding: '7px', borderRadius: '8px', background: T.bg3, border: 'none', cursor: 'pointer', display: 'flex' }}>
+                    <X size={15} color={T.text2} />
                   </motion.button>
-                )}
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={onClose}
-                  className="p-2 hover:bg-red-500/20 rounded-lg transition-colors">
-                  <X size={18} className="text-white/60 hover:text-red-400" />
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={handleSave} disabled={saving}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px', background: T.orange, border: 'none', cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '12px', color: '#000', opacity: saving ? 0.5 : 1 }}>
+                    <Save size={13} /> {saving ? '...' : 'Simpan'}
+                  </motion.button>
+                </>
+              ) : (
+                <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditing(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 13px', borderRadius: '8px', background: T.orangeD, border: `1px solid ${T.orangeBdr}`, cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '12px', color: T.orange }}>
+                  <Pencil size={13} /> Edit
                 </motion.button>
-              </div>
+              )}
+              <motion.button whileTap={{ scale: 0.9 }} onClick={onClose}
+                style={{ padding: '7px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, cursor: 'pointer', display: 'flex' }}>
+                <X size={15} color={T.text2} />
+              </motion.button>
             </div>
           </div>
-
-          {/* Body */}
-          <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* body */}
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '65vh', overflowY: 'auto' }}>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><FileText size={12} /> Nama Pengeluaran</label>
-              {isEditing ? (
-                <input type="text" value={draft.name} onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full bg-white/10 border border-accent/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors" />
-              ) : <p className="text-white font-semibold text-base">{expense.name || '-'}</p>}
+              <Label><FileText size={10} /> Nama Pengeluaran</Label>
+              {isEditing ? <input style={input} value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} />
+                : <p style={{ fontWeight: 700, fontSize: '16px', color: T.text1, margin: 0 }}>{expense.name || '-'}</p>}
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><Tag size={12} /> Kategori</label>
-              {isEditing ? (
-                <input type="text" value={draft.category} onChange={(e) => setDraft((p) => ({ ...p, category: e.target.value }))}
-                  className="w-full bg-white/10 border border-accent/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors" />
-              ) : expense.category
-                ? <span className="inline-block px-2.5 py-1 bg-accent/10 border border-accent/20 text-accent text-xs rounded-full font-medium">{expense.category}</span>
-                : <p className="text-white/40 text-sm">Tidak ada kategori</p>}
+              <Label><Tag size={10} /> Kategori</Label>
+              {isEditing ? <input style={input} value={draft.category} onChange={e => setDraft(p => ({ ...p, category: e.target.value }))} />
+                : expense.category ? <Pill color={T.orange} dim={T.orangeD} bdr={T.orangeBdr}>{expense.category}</Pill>
+                : <p style={{ fontSize: '13px', color: T.text3 }}>—</p>}
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><Wallet size={12} /> Jumlah</label>
-              {isEditing ? (
-                <input type="number" value={draft.amount} onChange={(e) => setDraft((p) => ({ ...p, amount: e.target.value }))}
-                  className="w-full bg-white/10 border border-accent/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors" />
-              ) : <p className="text-2xl font-display font-bold text-accent">−Rp {Number(expense.amount).toLocaleString('id-ID')}</p>}
+              <Label><Wallet size={10} /> Jumlah</Label>
+              {isEditing ? <input style={input} type="number" value={draft.amount} onChange={e => setDraft(p => ({ ...p, amount: e.target.value }))} />
+                : <p style={{ fontSize: '24px', fontWeight: 900, color: T.orange, margin: 0 }}>−Rp {Number(expense.amount).toLocaleString('id-ID')}</p>}
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><FileText size={12} /> Deskripsi</label>
-              {isEditing ? (
-                <textarea rows={3} value={draft.description} onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
-                  className="w-full bg-white/10 border border-accent/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent transition-colors resize-none" />
-              ) : <p className="text-white/70 text-sm leading-relaxed">{expense.description || <span className="text-white/30 italic">Tidak ada deskripsi</span>}</p>}
+              <Label><FileText size={10} /> Deskripsi</Label>
+              {isEditing ? <textarea rows={3} style={{ ...input, resize: 'none' }} value={draft.description} onChange={e => setDraft(p => ({ ...p, description: e.target.value }))} />
+                : <p style={{ fontSize: '13px', color: T.text2, lineHeight: 1.6, margin: 0 }}>{expense.description || <span style={{ color: T.text3 }}>—</span>}</p>}
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-2"><ImageIcon size={12} /> Bukti Pembayaran</label>
+              <Label><ImageIcon size={10} /> Bukti Pembayaran</Label>
               {expense.proof_image_url ? (
-                <div className="rounded-xl overflow-hidden border border-white/10">
+                <div style={{ borderRadius: '10px', overflow: 'hidden', border: `1px solid ${T.border}` }}>
                   <img src={`https://fxxjfkcjtuuxbrxhfrph.supabase.co/storage/v1/object/public/expense-proofs/${expense.proof_image_url}`}
-                    alt="Bukti pembayaran" className="w-full object-contain max-h-72 bg-black/20"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }} />
-                  <div style={{ display: 'none' }} className="flex-col items-center justify-center py-8 text-white/30">
-                    <ImageIcon size={28} className="mb-2 opacity-40" /><p className="text-sm">Gagal memuat gambar</p>
-                  </div>
+                    alt="Bukti" style={{ width: '100%', maxHeight: '240px', objectFit: 'contain', background: T.bg3 }} />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-8 rounded-xl border border-dashed border-white/15 text-white/30">
-                  <ImageIcon size={28} className="mb-2 opacity-40" /><p className="text-sm">Tidak ada bukti pembayaran</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px', border: `1px dashed ${T.border}`, borderRadius: '10px', color: T.text3, gap: '8px' }}>
+                  <ImageIcon size={24} />
+                  <p style={{ fontSize: '12px', margin: 0 }}>Tidak ada bukti</p>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-white/10 flex justify-end">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose}
-              className="px-5 py-2 glass hover:bg-white/10 rounded-lg text-sm text-white/70 font-medium transition-colors">
-              Tutup
-            </motion.button>
+          <div style={{ padding: '14px 20px', borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: '13px' }}>Tutup</button>
           </div>
         </div>
       </motion.div>
@@ -199,104 +398,77 @@ function IncomeDetailModal({ income, onClose, onUpdate }) {
     setIsEditing(false)
   }
 
-  const handleCancel = () => {
-    setDraft({ name: income.name || '', description: income.description || '', source: income.source || '', amount: income.amount ?? 0 })
-    setIsEditing(false)
-  }
-
   return (
     <AnimatePresence>
-      <motion.div key="inc-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-      <motion.div key="inc-modal"
-        initial={{ opacity: 0, scale: 0.92, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 24 }} transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-lg glass rounded-2xl overflow-hidden shadow-2xl"
-          onClick={(e) => e.stopPropagation()}>
-
-          {/* Header */}
-          <div className="relative px-6 pt-6 pb-4 border-b border-white/10">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 to-emerald-500" />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/20">
-                  <TrendingUp size={20} className="text-green-400" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-display font-bold text-white">Detail Pemasukan</h2>
-                  <p className="text-xs text-white/40">
-                    {income.created_at
-                      ? new Date(income.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                      : '-'}
-                  </p>
-                </div>
+      <motion.div key="bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} />
+      <motion.div key="md" initial={{ opacity: 0, scale: 0.93, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93, y: 24 }} transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+        style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', pointerEvents: 'none' }}>
+        <div onClick={e => e.stopPropagation()}
+          style={{ pointerEvents: 'auto', width: '100%', maxWidth: '500px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: T.green }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', background: T.greenD, borderRadius: '9px' }}>
+                <TrendingUp size={18} color={T.green} />
               </div>
-              <div className="flex items-center gap-2">
-                {isEditing ? (
-                  <>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={handleCancel} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                      <X size={16} className="text-white/50" />
-                    </motion.button>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={handleSave} disabled={saving}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm font-bold hover:opacity-90 disabled:opacity-50">
-                      <Save size={14} />{saving ? 'Menyimpan...' : 'Simpan'}
-                    </motion.button>
-                  </>
-                ) : (
-                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 glass hover:bg-white/10 rounded-lg text-sm font-medium">
-                    <Pencil size={14} className="text-green-400" /><span className="text-white/80">Edit</span>
+              <div>
+                <p style={{ fontWeight: 800, fontSize: '15px', color: T.text1, margin: 0 }}>Detail Pemasukan</p>
+                <p style={{ fontSize: '11px', color: T.text3, margin: '2px 0 0' }}>
+                  {income.created_at ? new Date(income.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {isEditing ? (
+                <>
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditing(false)}
+                    style={{ padding: '7px', borderRadius: '8px', background: T.bg3, border: 'none', cursor: 'pointer', display: 'flex' }}>
+                    <X size={15} color={T.text2} />
                   </motion.button>
-                )}
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={onClose}
-                  className="p-2 hover:bg-red-500/20 rounded-lg transition-colors">
-                  <X size={18} className="text-white/60 hover:text-red-400" />
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={handleSave} disabled={saving}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px', background: T.green, border: 'none', cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '12px', color: '#000', opacity: saving ? 0.5 : 1 }}>
+                    <Save size={13} /> {saving ? '...' : 'Simpan'}
+                  </motion.button>
+                </>
+              ) : (
+                <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditing(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 13px', borderRadius: '8px', background: T.greenD, border: `1px solid ${T.greenBdr}`, cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '12px', color: T.green }}>
+                  <Pencil size={13} /> Edit
                 </motion.button>
-              </div>
+              )}
+              <motion.button whileTap={{ scale: 0.9 }} onClick={onClose}
+                style={{ padding: '7px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, cursor: 'pointer', display: 'flex' }}>
+                <X size={15} color={T.text2} />
+              </motion.button>
             </div>
           </div>
-
-          {/* Body */}
-          <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '65vh', overflowY: 'auto' }}>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><FileText size={12} /> Nama Pemasukan</label>
-              {isEditing ? (
-                <input type="text" value={draft.name} onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full bg-white/10 border border-green-500/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-400 transition-colors" />
-              ) : <p className="text-white font-semibold text-base">{income.name || '-'}</p>}
+              <Label><FileText size={10} /> Nama Pemasukan</Label>
+              {isEditing ? <input style={input} value={draft.name} onChange={e => setDraft(p => ({ ...p, name: e.target.value }))} />
+                : <p style={{ fontWeight: 700, fontSize: '16px', color: T.text1, margin: 0 }}>{income.name || '-'}</p>}
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><Tag size={12} /> Sumber</label>
-              {isEditing ? (
-                <input type="text" value={draft.source} onChange={(e) => setDraft((p) => ({ ...p, source: e.target.value }))}
-                  className="w-full bg-white/10 border border-green-500/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-400 transition-colors" />
-              ) : income.source
-                ? <span className="inline-block px-2.5 py-1 bg-green-500/10 border border-green-500/20 text-green-400 text-xs rounded-full font-medium">{income.source}</span>
-                : <p className="text-white/40 text-sm">Tidak ada sumber</p>}
+              <Label><Tag size={10} /> Sumber</Label>
+              {isEditing ? <input style={input} value={draft.source} onChange={e => setDraft(p => ({ ...p, source: e.target.value }))} />
+                : income.source ? <Pill color={T.green} dim={T.greenD} bdr={T.greenBdr}>{income.source}</Pill>
+                : <p style={{ fontSize: '13px', color: T.text3 }}>—</p>}
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><Wallet size={12} /> Jumlah</label>
-              {isEditing ? (
-                <input type="number" value={draft.amount} onChange={(e) => setDraft((p) => ({ ...p, amount: e.target.value }))}
-                  className="w-full bg-white/10 border border-green-500/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-400 transition-colors" />
-              ) : <p className="text-2xl font-display font-bold text-green-400">+Rp {Number(income.amount).toLocaleString('id-ID')}</p>}
+              <Label><Wallet size={10} /> Jumlah</Label>
+              {isEditing ? <input style={input} type="number" value={draft.amount} onChange={e => setDraft(p => ({ ...p, amount: e.target.value }))} />
+                : <p style={{ fontSize: '24px', fontWeight: 900, color: T.green, margin: 0 }}>+Rp {Number(income.amount).toLocaleString('id-ID')}</p>}
             </div>
             <div>
-              <label className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5"><FileText size={12} /> Deskripsi</label>
-              {isEditing ? (
-                <textarea rows={3} value={draft.description} onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
-                  className="w-full bg-white/10 border border-green-500/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-400 transition-colors resize-none" />
-              ) : <p className="text-white/70 text-sm leading-relaxed">{income.description || <span className="text-white/30 italic">Tidak ada deskripsi</span>}</p>}
+              <Label><FileText size={10} /> Deskripsi</Label>
+              {isEditing ? <textarea rows={3} style={{ ...input, resize: 'none' }} value={draft.description} onChange={e => setDraft(p => ({ ...p, description: e.target.value }))} />
+                : <p style={{ fontSize: '13px', color: T.text2, lineHeight: 1.6, margin: 0 }}>{income.description || <span style={{ color: T.text3 }}>—</span>}</p>}
             </div>
           </div>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-white/10 flex justify-end">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose}
-              className="px-5 py-2 glass hover:bg-white/10 rounded-lg text-sm text-white/70 font-medium transition-colors">
-              Tutup
-            </motion.button>
+          <div style={{ padding: '14px 20px', borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: '13px' }}>Tutup</button>
           </div>
         </div>
       </motion.div>
@@ -317,7 +489,7 @@ function SendNotificationModal({ onClose }) {
     try {
       await sendPushToAll({ title: title.trim(), body: body.trim() })
       setStatus('success')
-      setTimeout(() => onClose(), 1500)
+      setTimeout(onClose, 1500)
     } catch (err) {
       setErrMsg(err?.message || 'Gagal mengirim notifikasi')
       setStatus('error')
@@ -326,62 +498,59 @@ function SendNotificationModal({ onClose }) {
 
   return (
     <AnimatePresence>
-      <motion.div key="notif-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-      <motion.div key="notif-modal"
-        initial={{ opacity: 0, scale: 0.92, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 24 }} transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-md glass rounded-2xl overflow-hidden shadow-2xl"
-          onClick={(e) => e.stopPropagation()}>
-          <div className="relative px-6 pt-6 pb-4 border-b border-white/10">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 to-purple-500" />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-violet-500/20"><Bell size={20} className="text-violet-400" /></div>
-                <div>
-                  <h2 className="text-lg font-display font-bold text-white">Kirim Notifikasi</h2>
-                  <p className="text-xs text-white/40">Ke semua student yang sudah izinkan notifikasi</p>
-                </div>
+      <motion.div key="bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} />
+      <motion.div key="md" initial={{ opacity: 0, scale: 0.93, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93, y: 24 }} transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+        style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', pointerEvents: 'none' }}>
+        <div onClick={e => e.stopPropagation()}
+          style={{ pointerEvents: 'auto', width: '100%', maxWidth: '440px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: T.orange }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', background: T.orangeD, borderRadius: '9px' }}>
+                <Bell size={18} color={T.orange} />
               </div>
-              <motion.button whileTap={{ scale: 0.9 }} onClick={onClose} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors">
-                <X size={18} className="text-white/60 hover:text-red-400" />
-              </motion.button>
+              <div>
+                <p style={{ fontWeight: 800, fontSize: '15px', color: T.text1, margin: 0 }}>Kirim Notifikasi</p>
+                <p style={{ fontSize: '11px', color: T.text3, margin: '2px 0 0' }}>Ke semua student yang subscribed</p>
+              </div>
             </div>
+            <button onClick={onClose} style={{ padding: '7px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, cursor: 'pointer', display: 'flex' }}>
+              <X size={15} color={T.text2} />
+            </button>
           </div>
-          <div className="px-6 py-5 space-y-4">
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
-              <label className="text-xs text-white/40 mb-1.5 block">Judul Notifikasi</label>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-                placeholder="Contoh: Pengingat Iuran Bulan Ini" maxLength={80}
-                disabled={status === 'sending' || status === 'success'}
-                className="w-full bg-white/10 border border-white/15 focus:border-violet-400/60 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none transition-colors disabled:opacity-50" />
+              <Label>Judul</Label>
+              <input style={input} value={title} onChange={e => setTitle(e.target.value)} placeholder="Contoh: Pengingat Iuran" maxLength={80}
+                disabled={status === 'sending' || status === 'success'} />
             </div>
             <div>
-              <label className="text-xs text-white/40 mb-1.5 block">Deskripsi</label>
-              <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)}
-                placeholder="Contoh: Harap segera lakukan pembayaran sebelum tanggal 15." maxLength={200}
-                disabled={status === 'sending' || status === 'success'}
-                className="w-full bg-white/10 border border-white/15 focus:border-violet-400/60 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none transition-colors resize-none disabled:opacity-50" />
-              <p className="text-right text-xs text-white/25 mt-1">{body.length}/200</p>
+              <Label>Pesan</Label>
+              <textarea rows={4} style={{ ...input, resize: 'none' }} value={body} onChange={e => setBody(e.target.value)}
+                placeholder="Isi pesan notifikasi..." maxLength={200} disabled={status === 'sending' || status === 'success'} />
+              <p style={{ textAlign: 'right', fontSize: '11px', color: T.text3, margin: '4px 0 0' }}>{body.length}/200</p>
             </div>
             {status === 'error' && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                ⚠ {errMsg}
-              </motion.p>
+              <p style={{ fontSize: '12px', color: T.red, background: T.redD, border: `1px solid ${T.redBdr}`, borderRadius: '8px', padding: '10px 12px', margin: 0 }}>⚠ {errMsg}</p>
             )}
             <motion.button
-              whileHover={{ scale: status === 'idle' ? 1.02 : 1 }}
-              whileTap={{ scale: status === 'idle' ? 0.98 : 1 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleSend}
               disabled={!title.trim() || !body.trim() || status === 'sending' || status === 'success'}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                ${status === 'success' ? 'bg-green-500 text-white'
-                : 'bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 text-white shadow-lg shadow-violet-500/25'}`}>
-              {status === 'sending' ? <><Loader2 size={16} className="animate-spin" /> Mengirim...</>
-                : status === 'success' ? <>✓ Berhasil Dikirim!</>
-                : <><Send size={16} /> Kirim Notifikasi</>}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                padding: '12px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '13px',
+                background: status === 'success' ? T.green : T.orange,
+                color: '#000', opacity: (!title.trim() || !body.trim() || status === 'sending') ? 0.5 : 1,
+                transition: 'all 0.2s',
+              }}
+            >
+              {status === 'sending' ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Mengirim...</>
+                : status === 'success' ? <>✓ Berhasil!</>
+                : <><Send size={15} /> Kirim Notifikasi</>}
             </motion.button>
           </div>
         </div>
@@ -390,87 +559,78 @@ function SendNotificationModal({ onClose }) {
   )
 }
 
-// ─── Inline edit card ──────────────────────────────────────────────────────────
-function EditableCard({ icon: Icon, title, value, subtext, accentClass, onSave }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft]     = useState('')
-  const [saving, setSaving]   = useState(false)
-
-  const startEdit = () => { setDraft(String(value)); setEditing(true) }
-  const cancel    = () => setEditing(false)
-  const save = async () => {
-    const num = parseFloat(draft.replace(/[^0-9.-]/g, ''))
-    if (isNaN(num)) return
-    setSaving(true)
-    await onSave(num)
-    setSaving(false)
-    setEditing(false)
-  }
-
+// ─── Mini row (overview recent list) ──────────────────────────────────────────
+function MiniRow({ name, sub, amount, amountColor }) {
   return (
-    <div className="glass p-6 rounded-2xl relative overflow-hidden">
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${accentClass}`} />
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-2 rounded-lg bg-gradient-to-br ${accentClass} bg-opacity-20`}>
-          <Icon size={20} className="text-white" />
-        </div>
-        {!editing ? (
-          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={startEdit}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-            <Pencil size={15} className="text-white/50 hover:text-accent" />
-          </motion.button>
-        ) : (
-          <div className="flex gap-1">
-            <motion.button whileTap={{ scale: 0.9 }} onClick={cancel} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-              <X size={15} className="text-white/50" />
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={save} disabled={saving}
-              className="p-1.5 hover:bg-green-500/20 rounded-lg transition-colors">
-              <Check size={15} className="text-green-400" />
-            </motion.button>
-          </div>
-        )}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '9px', background: T.bg3 }}>
+      <div style={{ minWidth: 0, marginRight: '10px' }}>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: T.text1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+        {sub && <p style={{ fontSize: '11px', color: T.text3, margin: '1px 0 0' }}>{sub}</p>}
       </div>
-      <p className="text-white/60 text-sm mb-1">{title}</p>
-      <AnimatePresence mode="wait">
-        {editing ? (
-          <motion.input key="input" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-            type="number" value={draft} onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }} autoFocus
-            className="w-full bg-white/10 border border-accent/40 rounded-lg px-3 py-1.5 text-white text-lg font-bold focus:outline-none focus:border-accent" />
-        ) : (
-          <motion.p key="value" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-            className="text-xl font-display font-bold text-white">
-            Rp {Number(value).toLocaleString('id-ID')}
-          </motion.p>
-        )}
-      </AnimatePresence>
-      <p className="text-white/40 text-xs mt-1">{subtext}</p>
+      <p style={{ fontSize: '13px', fontWeight: 800, color: amountColor, margin: 0, flexShrink: 0 }}>{amount}</p>
     </div>
   )
 }
 
-// ─── Read-only stat card ────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, title, value, subtext, accentClass }) {
+// ─── Expense row ───────────────────────────────────────────────────────────────
+function ExpenseRow({ expense, onClick, onDelete }) {
   return (
-    <div className="glass p-6 rounded-2xl relative overflow-hidden">
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${accentClass}`} />
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-2 rounded-lg bg-gradient-to-br ${accentClass} bg-opacity-20`}>
-          <Icon size={20} className="text-white" />
+    <motion.div
+      whileHover={{ background: 'rgba(255,255,255,0.04)' }}
+      onClick={() => onClick(expense)}
+      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderRadius: '10px', background: T.bg3, cursor: 'pointer', transition: 'background 0.15s' }}
+    >
+      <div style={{ padding: '8px', background: T.orangeD, borderRadius: '9px', flexShrink: 0 }}>
+        <TrendingDown size={16} color={T.orange} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: T.text1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expense.name}</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '3px', alignItems: 'center' }}>
+          {expense.category && <Pill color={T.orange} dim={T.orangeD} bdr={T.orangeBdr}>{expense.category}</Pill>}
+          <span style={{ fontSize: '11px', color: T.text3 }}>{expense.created_at ? new Date(expense.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>
         </div>
       </div>
-      <p className="text-white/60 text-sm mb-1">{title}</p>
-      <p className="text-xl font-display font-bold text-white">{value}</p>
-      <p className="text-white/40 text-xs mt-1">{subtext}</p>
-    </div>
+      <p style={{ fontSize: '13px', fontWeight: 800, color: T.orange, flexShrink: 0, margin: 0 }}>−Rp {expense.amount.toLocaleString('id-ID')}</p>
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={e => { e.stopPropagation(); onDelete(expense.id) }}
+        style={{ padding: '7px', borderRadius: '8px', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex' }}
+      >
+        <Trash2 size={15} color={T.text3} />
+      </motion.button>
+    </motion.div>
   )
 }
 
-const monthNames = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-]
+// ─── Income row ────────────────────────────────────────────────────────────────
+function IncomeRow({ income, onClick, onDelete }) {
+  return (
+    <motion.div
+      whileHover={{ background: 'rgba(255,255,255,0.04)' }}
+      onClick={() => onClick(income)}
+      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderRadius: '10px', background: T.bg3, cursor: 'pointer', transition: 'background 0.15s' }}
+    >
+      <div style={{ padding: '8px', background: T.greenD, borderRadius: '9px', flexShrink: 0 }}>
+        <TrendingUp size={16} color={T.green} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: T.text1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.name}</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '3px', alignItems: 'center' }}>
+          {income.source && <Pill color={T.green} dim={T.greenD} bdr={T.greenBdr}>{income.source}</Pill>}
+          <span style={{ fontSize: '11px', color: T.text3 }}>{income.created_at ? new Date(income.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>
+        </div>
+      </div>
+      <p style={{ fontSize: '13px', fontWeight: 800, color: T.green, flexShrink: 0, margin: 0 }}>+Rp {income.amount.toLocaleString('id-ID')}</p>
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={e => { e.stopPropagation(); onDelete(income.id) }}
+        style={{ padding: '7px', borderRadius: '8px', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex' }}
+      >
+        <Trash2 size={15} color={T.text3} />
+      </motion.button>
+    </motion.div>
+  )
+}
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
@@ -491,14 +651,23 @@ export default function AdminDashboard() {
   const [lastUpdated, setLastUpdated]           = useState(null)
   const [toast, setToast]                       = useState(null)
 
+  // Expense table state
+  const [expSearch, setExpSearch]           = useState('')
+  const [expRows, setExpRows]               = useState(10)
+  const [expPage, setExpPage]               = useState(1)
+
+  // Income table state
+  const [incSearch, setIncSearch]           = useState('')
+  const [incRows, setIncRows]               = useState(10)
+  const [incPage, setIncPage]               = useState(1)
+
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedYear, setSelectedYear]   = useState(currentDate.getFullYear())
 
   const [unpaidStudents, setUnpaidStudents]     = useState([])
   const [paymentSelection, setPaymentSelection] = useState({
-    selectedCount: 0, pendingPaid: 0, pendingUnpaid: 0,
-    isSaving: false, saveChanges: null, cancelChanges: null,
+    selectedCount: 0, pendingPaid: 0, pendingUnpaid: 0, isSaving: false, saveChanges: null, cancelChanges: null,
   })
   const [showMonthModal, setShowMonthModal]                 = useState(false)
   const [selectedPaymentStudent, setSelectedPaymentStudent] = useState(null)
@@ -511,7 +680,6 @@ export default function AdminDashboard() {
   const fetchAdminData = useCallback(async (silent = false) => {
     try {
       if (!silent) setIsLoading(true)
-
       const [expenseRes, incomeRes, summaryRes, studentsRes, monthlyPaymentsRes] = await Promise.all([
         supabase.from('expenses').select('*').order('created_at', { ascending: false }),
         supabase.from('income').select('*').order('created_at', { ascending: false }),
@@ -519,25 +687,18 @@ export default function AdminDashboard() {
         supabase.from('students').select('id, name'),
         supabase.from('payment_status').select('student_id, paid').eq('month', selectedMonth).eq('year', selectedYear),
       ])
-
       setExpenses(expenseRes.data || [])
       setIncomes(incomeRes.data  || [])
-
       const allStudents     = studentsRes.data || []
       const monthlyPayments = monthlyPaymentsRes.data || []
-
-      setUnpaidStudents(
-        allStudents.filter((student) => {
-          const payment = monthlyPayments.find((p) => p.student_id === student.id)
-          return !payment || payment.paid === false
-        })
-      )
-
+      setUnpaidStudents(allStudents.filter(s => {
+        const p = monthlyPayments.find(m => m.student_id === s.id)
+        return !p || p.paid === false
+      }))
       if (summaryRes.data) {
         setFinancialSummary({ mini_bank: summaryRes.data.mini_bank ?? 0, treasurer: summaryRes.data.treasurer ?? 0 })
         setSummaryId(summaryRes.data.id)
       }
-
       setLastUpdated(new Date())
     } catch (err) {
       console.error('Failed to fetch admin data:', err)
@@ -546,123 +707,105 @@ export default function AdminDashboard() {
     }
   }, [selectedMonth, selectedYear])
 
-  useEffect(() => {
-    fetchAdminData(false)
-  }, [fetchAdminData])
+  useEffect(() => { fetchAdminData(false) }, [fetchAdminData])
+
+  // Reset pages on search/rows change
+  useEffect(() => { setExpPage(1) }, [expSearch, expRows])
+  useEffect(() => { setIncPage(1) }, [incSearch, incRows])
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const totalClassCash = calcTotalCash(incomes, expenses)
 
-  // ── Refresh with toast ──────────────────────────────────────────────────────
-  const handleRefresh = async () => {
-    await fetchAdminData(true)
-    setToast('Data berhasil diperbarui!')
-  }
+  // Expense filter
+  const filteredExp = expenses.filter(e => {
+    const kw = expSearch.toLowerCase()
+    return e.name?.toLowerCase().includes(kw) || e.category?.toLowerCase().includes(kw) || e.description?.toLowerCase().includes(kw)
+  })
+  const totalExpPages = Math.ceil(filteredExp.length / expRows)
+  const pagedExp = filteredExp.slice((expPage - 1) * expRows, expPage * expRows)
 
-  // ── Summary update ──────────────────────────────────────────────────────────
+  // Income filter
+  const filteredInc = incomes.filter(i => {
+    const kw = incSearch.toLowerCase()
+    return i.name?.toLowerCase().includes(kw) || i.source?.toLowerCase().includes(kw) || i.description?.toLowerCase().includes(kw)
+  })
+  const totalIncPages = Math.ceil(filteredInc.length / incRows)
+  const pagedInc = filteredInc.slice((incPage - 1) * incRows, incPage * incRows)
+
+  const totalIncome  = incomes.reduce((s, r) => s + (r.amount ?? 0), 0)
+  const totalExpense = expenses.reduce((s, r) => s + (r.amount ?? 0), 0)
+
+  // ── Actions ──────────────────────────────────────────────────────────────────
+  const handleRefresh = async () => { await fetchAdminData(true); setToast('Data berhasil diperbarui!') }
+  const handleLogout  = () => { logout(); navigate('/login') }
+
   const updateSummaryField = async (field, value) => {
     try {
       if (summaryId) {
-        const { error } = await supabase.from('financial_summary').update({ [field]: value }).eq('id', summaryId)
-        if (error) throw error
+        await supabase.from('financial_summary').update({ [field]: value }).eq('id', summaryId)
       } else {
-        const { data, error } = await supabase.from('financial_summary').insert([{ [field]: value }]).select().single()
-        if (error) throw error
+        const { data } = await supabase.from('financial_summary').insert([{ [field]: value }]).select().single()
         setSummaryId(data.id)
       }
-      setFinancialSummary((prev) => ({ ...prev, [field]: value }))
-    } catch (err) {
-      console.error(`Failed to update ${field}:`, err)
-    }
+      setFinancialSummary(prev => ({ ...prev, [field]: value }))
+    } catch (err) { console.error(err) }
   }
 
-  // ── Update expense ──────────────────────────────────────────────────────────
-  const handleUpdateExpense = async (id, updatedData) => {
+  const handleUpdateExpense = async (id, data) => {
     try {
-      const { error } = await supabase.from('expenses').update(updatedData).eq('id', id)
-      if (error) throw error
-      setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...updatedData } : e)))
-      setSelectedExpense((prev) => (prev?.id === id ? { ...prev, ...updatedData } : prev))
-    } catch (err) {
-      console.error('Failed to update expense:', err)
-    }
+      await supabase.from('expenses').update(data).eq('id', id)
+      setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...data } : e))
+      setSelectedExpense(prev => prev?.id === id ? { ...prev, ...data } : prev)
+    } catch (err) { console.error(err) }
   }
 
-  // ── Update income ───────────────────────────────────────────────────────────
-  const handleUpdateIncome = async (id, updatedData) => {
+  const handleUpdateIncome = async (id, data) => {
     try {
-      const { error } = await supabase.from('income').update(updatedData).eq('id', id)
-      if (error) throw error
-      setIncomes((prev) => prev.map((inc) => (inc.id === id ? { ...inc, ...updatedData } : inc)))
-      setSelectedIncome((prev) => (prev?.id === id ? { ...prev, ...updatedData } : prev))
-    } catch (err) {
-      console.error('Failed to update income:', err)
-    }
+      await supabase.from('income').update(data).eq('id', id)
+      setIncomes(prev => prev.map(i => i.id === id ? { ...i, ...data } : i))
+      setSelectedIncome(prev => prev?.id === id ? { ...prev, ...data } : prev)
+    } catch (err) { console.error(err) }
   }
 
-  // ── CRUD ────────────────────────────────────────────────────────────────────
-  const handleLogout = () => { logout(); navigate('/login') }
-
-  const handleAddExpense = async (expenseData) => {
-    try {
-      const { error } = await supabase.from('expenses').insert([expenseData])
-      if (error) throw error
-      setShowExpenseForm(false)
-      fetchAdminData(true)
-    } catch (err) { console.error('Failed to add expense:', err) }
+  const handleAddExpense = async (data) => {
+    try { await supabase.from('expenses').insert([data]); setShowExpenseForm(false); fetchAdminData(true) }
+    catch (err) { console.error(err) }
   }
 
-  const handleAddIncome = async (incomeData) => {
-    try {
-      const { error } = await supabase.from('income').insert([incomeData])
-      if (error) throw error
-      setShowIncomeForm(false)
-      fetchAdminData(true)
-    } catch (err) { console.error('Failed to add income:', err) }
+  const handleAddIncome = async (data) => {
+    try { await supabase.from('income').insert([data]); setShowIncomeForm(false); fetchAdminData(true) }
+    catch (err) { console.error(err) }
   }
 
   const handleDeleteExpense = async (id) => {
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', id)
-      if (error) throw error
-      setExpenses((prev) => prev.filter((e) => e.id !== id))
+      await supabase.from('expenses').delete().eq('id', id)
+      setExpenses(prev => prev.filter(e => e.id !== id))
       if (selectedExpense?.id === id) setSelectedExpense(null)
-    } catch (err) { console.error('Failed to delete expense:', err) }
+    } catch (err) { console.error(err) }
   }
 
   const handleDeleteIncome = async (id) => {
     try {
-      const { error } = await supabase.from('income').delete().eq('id', id)
-      if (error) throw error
-      setIncomes((prev) => prev.filter((inc) => inc.id !== id))
+      await supabase.from('income').delete().eq('id', id)
+      setIncomes(prev => prev.filter(i => i.id !== id))
       if (selectedIncome?.id === id) setSelectedIncome(null)
-    } catch (err) { console.error('Failed to delete income:', err) }
+    } catch (err) { console.error(err) }
   }
 
-  const handlePaymentSelectionUpdate = ({ selectedCount, pendingPaid, pendingUnpaid, isSaving, saveChanges, cancelChanges }) => {
-    setPaymentSelection({ selectedCount, pendingPaid, pendingUnpaid, isSaving, saveChanges, cancelChanges })
-  }
+  const handlePaymentSelectionUpdate = (sel) => setPaymentSelection(sel)
 
-  const handlePaymentCancel = () => { paymentSelection.cancelChanges?.() }
-  const handlePaymentSave   = () => { paymentSelection.saveChanges?.() }
-
-  // ── Month Modal Handlers ────────────────────────────────────────────────────
+  // Month modal
   const fetchStudentMonths = async (studentId) => {
     try {
       setIsMonthModalLoading(true)
       const year = new Date().getFullYear()
-      const { data, error } = await supabase
-        .from('payment_status').select('month, paid').eq('student_id', studentId).eq('year', year)
-      if (error) throw error
-      const monthMap = {}
-      data?.forEach((item) => { monthMap[item.month] = item.paid })
-      setStudentMonthStatus(monthMap)
-    } catch (err) {
-      console.error('Failed to fetch student months:', err)
-      setStudentMonthStatus({})
-    } finally {
-      setIsMonthModalLoading(false)
-    }
+      const { data } = await supabase.from('payment_status').select('month, paid').eq('student_id', studentId).eq('year', year)
+      const map = {}
+      data?.forEach(item => { map[item.month] = item.paid })
+      setStudentMonthStatus(map)
+    } catch (err) { setStudentMonthStatus({}) }
+    finally { setIsMonthModalLoading(false) }
   }
 
   const handleOpenMonthModal = async (student) => {
@@ -684,439 +827,507 @@ export default function AdminDashboard() {
     setIsSavingMonths(true)
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
     try {
-      const year        = new Date().getFullYear()
-      const studentId   = selectedPaymentStudent.id
-      const studentName = selectedPaymentStudent.name
-
+      const year = new Date().getFullYear()
+      const { id: studentId, name: studentName } = selectedPaymentStudent
       for (const month of Array.from(selectedMonths).sort((a, b) => a - b)) {
-        const { data: existingPayment, error } = await supabase
-          .from('payment_status').select('*').eq('student_id', studentId).eq('month', month).eq('year', year).maybeSingle()
-        if (error) throw error
-
-        if (existingPayment) {
-          if (!existingPayment.paid) {
-            await supabase.from('payment_status')
-              .update({ paid: true, updated_at: new Date().toISOString() }).eq('id', existingPayment.id)
-          }
+        const { data: existing } = await supabase.from('payment_status').select('*').eq('student_id', studentId).eq('month', month).eq('year', year).maybeSingle()
+        if (existing) {
+          if (!existing.paid) await supabase.from('payment_status').update({ paid: true, updated_at: new Date().toISOString() }).eq('id', existing.id)
         } else {
-          await supabase.from('payment_status')
-            .insert([{ student_id: studentId, month, year, paid: true, updated_at: new Date().toISOString() }])
+          await supabase.from('payment_status').insert([{ student_id: studentId, month, year, paid: true, updated_at: new Date().toISOString() }])
         }
-
         await supabase.from('income').insert([{
           name: `${studentName} - ${MONTHS[month - 1]} Payment`,
           amount: 10000, source: 'Student Contributions',
-          description: `Payment from ${studentName}`,
-          created_at: new Date().toISOString(),
+          description: `Payment from ${studentName}`, created_at: new Date().toISOString(),
         }])
       }
-
       setShowMonthModal(false)
       setSelectedPaymentStudent(null)
       setSelectedMonths(new Set())
       setStudentMonthStatus({})
       await fetchAdminData(true)
+      setToast('Pembayaran berhasil disimpan!')
     } catch (err) {
-      console.error('Failed to save month selection:', err)
-      alert('Gagal menyimpan perubahan. Silakan coba lagi.')
+      console.error(err)
+      alert('Gagal menyimpan. Silakan coba lagi.')
     } finally {
       setIsSavingMonths(false)
     }
   }
 
-  // ── Variants ────────────────────────────────────────────────────────────────
-  const containerVariants = {
-    hidden:  { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
-  }
-  const itemVariants = {
-    hidden:  { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-  }
+  const cV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.05 } } }
+  const iV = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { duration: 0.3 } } }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-primary via-dark-secondary to-dark-primary">
+    <div style={{ minHeight: '100vh', background: T.bg, fontFamily: "'Inter', sans-serif", position: 'relative', overflowX: 'hidden' }}>
 
-      {/* ── Toast ── */}
+      {/* Toast */}
       <AnimatePresence>
         {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </AnimatePresence>
 
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-40 glass border-b border-accent/10 backdrop-blur-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-white">Admin Panel</h1>
-            <p className="text-sm text-white/60">by Nopal</p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="mt-2 group relative overflow-hidden px-3 py-2 rounded-xl glass border border-white/10 hover:border-accent/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/10 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="relative flex items-center gap-2">
-                <RefreshCw
-                  size={16}
-                  className={`text-accent transition-transform duration-500 ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`}
-                />
-                <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
-                  {isLoading ? 'Refreshing...' : 'Refresh'}
-                </span>
-              </div>
+      {/* ── Header ── */}
+      <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
+        style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(12,12,12,0.92)', borderBottom: `1px solid ${T.border}`, backdropFilter: 'blur(20px)' }}>
+        <div className="adm-header">
+          {/* Left */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <div>
+              <h1 style={{ fontSize: '18px', fontWeight: 900, margin: 0, color: T.text1, letterSpacing: '-0.3px' }}>Admin Panel</h1>
+              <p style={{ fontSize: '10px', color: T.text3, margin: '1px 0 0', textTransform: 'uppercase', letterSpacing: '1.2px' }}>by nopal</p>
+            </div>
+            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+              onClick={handleRefresh} disabled={isLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px',
+                background: T.orangeD, border: `1px solid ${T.orangeBdr}`, color: T.orange,
+                fontSize: '12px', fontWeight: 700, cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontFamily: "'Inter', sans-serif", opacity: isLoading ? 0.5 : 1, whiteSpace: 'nowrap',
+              }}>
+              <RefreshCw size={13} color={T.orange} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
+              <span className="adm-refresh-label">{isLoading ? 'Refreshing...' : 'Refresh'}</span>
             </motion.button>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              {isLoading ? (
-                <RefreshCw size={13} className="text-accent animate-spin" />
-              ) : (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                </span>
-              )}
-              <span className="text-xs text-white/30 hidden sm:inline">
-                {lastUpdated
-                  ? `Update ${lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
-                  : 'Memuat...'}
+
+          {/* Right */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              {isLoading
+                ? <RefreshCw size={11} color={T.orange} style={{ animation: 'spin 1s linear infinite' }} />
+                : <span style={{ position: 'relative', display: 'inline-flex', width: '7px', height: '7px' }}>
+                    <span className="adm-ping" />
+                    <span style={{ position: 'relative', width: '7px', height: '7px', borderRadius: '50%', background: T.green, display: 'block' }} />
+                  </span>}
+              <span className="adm-last-updated" style={{ fontSize: '11px', color: T.text3 }}>
+                {lastUpdated ? lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Memuat...'}
               </span>
             </div>
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               onClick={() => setShowNotifForm(true)}
-              className="flex items-center gap-2 px-4 py-2 glass hover:bg-violet-500/20 transition-colors rounded-lg">
-              <Bell size={18} className="text-violet-400" />
-              <span className="text-sm font-medium text-white/80 hidden sm:inline">Notifikasi</span>
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>
+              <Bell size={14} color={T.orange} />
+              <span className="adm-notif-label">Notifikasi</span>
             </motion.button>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 glass hover:bg-red-500/20 transition-colors rounded-lg">
-              <LogOut size={18} className="text-accent" />
-              <span className="text-sm font-medium">Logout</span>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={handleLogout}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', background: T.redD, border: `1px solid ${T.redBdr}`, color: T.red, fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>
+              <LogOut size={14} />
+              <span className="adm-logout-label">Logout</span>
             </motion.button>
           </div>
         </div>
       </motion.div>
 
-      {/* Navigation tabs */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {['overview', 'expenses', 'income', 'payments'].map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-6 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
-                activeTab === tab ? 'bg-accent text-dark-primary' : 'glass hover:bg-white/10'
-              }`}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
+      {/* ── Desktop Tabs ── */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px 16px 0' }}>
+        <div className="adm-tabs-row" style={{ display: 'flex', gap: '6px', marginBottom: '20px', overflowX: 'auto' }}>
+          {TABS.map(({ key, label }) => (
+            <motion.button key={key} whileTap={{ scale: 0.96 }}
+              onClick={() => setActiveTab(key)}
+              style={{
+                padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Inter', sans-serif", transition: 'all 0.18s',
+                ...(activeTab === key
+                  ? { background: T.orange, color: '#000', border: 'none' }
+                  : { background: 'transparent', color: T.text3, border: `1px solid ${T.border}` }),
+              }}>
+              {label}
+            </motion.button>
           ))}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Content */}
-      <motion.div variants={containerVariants} initial="hidden" animate="visible"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+      {/* ── Content ── */}
+      <motion.div variants={cV} initial="hidden" animate="visible"
+        className="adm-content"
+        style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 60px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
-          <motion.div variants={itemVariants} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StatCard icon={Wallet} title="Total Kas Kelas"
-                value={`Rp ${totalClassCash.toLocaleString('id-ID')}`}
-                subtext="Pemasukan − Pengeluaran (real-time)" accentClass="from-accent to-accent-light" />
-              <EditableCard icon={TrendingUp} title="Mini Bank" value={financialSummary.mini_bank}
-                subtext="Savings account - tap ✏ to edit" accentClass="from-green-500 to-emerald-500"
-                onSave={(val) => updateSummaryField('mini_bank', val)} />
-              <EditableCard icon={TrendingDown} title="Bendahara" value={financialSummary.treasurer}
-                subtext="With treasurer - tap ✏ to edit" accentClass="from-blue-500 to-cyan-500"
-                onSave={(val) => updateSummaryField('treasurer', val)} />
-            </div>
+          <>
+            <motion.div variants={iV} className="adm-stat-grid">
+              <StatCard icon={Wallet} label="Total Kas Kelas"
+                value={`Rp ${totalClassCash.toLocaleString('id-ID')}`} sub="Pemasukan − Pengeluaran"
+                accentColor={T.orange} accentDim={T.orangeD} accentBdr={T.orangeBdr} />
+              <EditableCard icon={TrendingUp} label="Mini Bank" value={financialSummary.mini_bank}
+                sub="Tekan ✏ untuk edit" accentColor={T.green} accentDim={T.greenD} accentBdr={T.greenBdr}
+                onSave={val => updateSummaryField('mini_bank', val)} />
+              <EditableCard icon={TrendingDown} label="Bendahara" value={financialSummary.treasurer}
+                sub="Tekan ✏ untuk edit" accentColor={T.blue} accentDim={T.blueD} accentBdr={T.blueBdr}
+                onSave={val => updateSummaryField('treasurer', val)} />
+            </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            <motion.div variants={iV} className="adm-action-grid">
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                 onClick={() => setShowExpenseForm(true)}
-                className="glass p-8 text-center hover:bg-white/20 transition-colors rounded-2xl">
-                <Plus size={32} className="mx-auto mb-3 text-accent" />
-                <p className="text-lg font-display font-bold text-white">Add Expense</p>
-                <p className="text-sm text-white/60">Record class expenses with proof</p>
+                style={{ ...card, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', cursor: 'pointer', border: `1px dashed ${T.orangeBdr}` }}>
+                <div style={{ padding: '12px', background: T.orangeD, borderRadius: '12px' }}>
+                  <Plus size={22} color={T.orange} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontWeight: 800, fontSize: '14px', color: T.text1, margin: 0 }}>Tambah Pengeluaran</p>
+                  <p style={{ fontSize: '12px', color: T.text3, margin: '3px 0 0' }}>Catat pengeluaran kelas</p>
+                </div>
               </motion.button>
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                 onClick={() => setShowIncomeForm(true)}
-                className="glass p-8 text-center hover:bg-white/20 transition-colors rounded-2xl">
-                <Plus size={32} className="mx-auto mb-3 text-accent" />
-                <p className="text-lg font-display font-bold text-white">Add Income</p>
-                <p className="text-sm text-white/60">Record class income/collections</p>
+                style={{ ...card, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', cursor: 'pointer', border: `1px dashed ${T.greenBdr}` }}>
+                <div style={{ padding: '12px', background: T.greenD, borderRadius: '12px' }}>
+                  <Plus size={22} color={T.green} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontWeight: 800, fontSize: '14px', color: T.text1, margin: 0 }}>Tambah Pemasukan</p>
+                  <p style={{ fontSize: '12px', color: T.text3, margin: '3px 0 0' }}>Catat pemasukan / iuran</p>
+                </div>
               </motion.button>
-            </div>
+            </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="glass p-6 rounded-2xl">
-                <h3 className="text-lg font-display font-bold text-white mb-4">Pengeluaran Terakhir</h3>
-                <div className="space-y-3 max-h-96 overflow-auto">
-                  {expenses.slice(0, 5).map((expense) => (
-                    <div key={expense.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                      <div>
-                        <p className="text-white font-medium">{expense.name}</p>
-                        <p className="text-xs text-white/50">{expense.category}</p>
-                      </div>
-                      <p className="text-accent font-bold">-Rp {expense.amount.toLocaleString('id-ID')}</p>
-                    </div>
-                  ))}
-                  {expenses.length === 0 && <p className="text-white/30 text-sm text-center py-4">Belum ada data.</p>}
+            <motion.div variants={iV} className="adm-recent-grid">
+              <div style={{ ...card, padding: '18px 20px' }}>
+                <p style={{ fontWeight: 800, fontSize: '14px', color: T.text1, margin: '0 0 12px' }}>Pengeluaran Terakhir</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {expenses.slice(0, 5).map(e => <MiniRow key={e.id} name={e.name} sub={e.category} amount={`−Rp ${e.amount.toLocaleString('id-ID')}`} amountColor={T.orange} />)}
+                  {expenses.length === 0 && <p style={{ fontSize: '12px', color: T.text3, textAlign: 'center', padding: '16px 0' }}>Belum ada data</p>}
                 </div>
               </div>
-              <div className="glass p-6 rounded-2xl">
-                <h3 className="text-lg font-display font-bold text-white mb-4">Pemasukan Terakhir</h3>
-                <div className="space-y-3 max-h-96 overflow-auto">
-                  {incomes.slice(0, 5).map((income) => (
-                    <div key={income.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                      <div>
-                        <p className="text-white font-medium">{income.name}</p>
-                        <p className="text-xs text-white/50">{income.source}</p>
-                      </div>
-                      <p className="text-green-500 font-bold">+Rp {income.amount.toLocaleString('id-ID')}</p>
-                    </div>
-                  ))}
-                  {incomes.length === 0 && <p className="text-white/30 text-sm text-center py-4">Belum ada data.</p>}
+              <div style={{ ...card, padding: '18px 20px' }}>
+                <p style={{ fontWeight: 800, fontSize: '14px', color: T.text1, margin: '0 0 12px' }}>Pemasukan Terakhir</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {incomes.slice(0, 5).map(i => <MiniRow key={i.id} name={i.name} sub={i.source} amount={`+Rp ${i.amount.toLocaleString('id-ID')}`} amountColor={T.green} />)}
+                  {incomes.length === 0 && <p style={{ fontSize: '12px', color: T.text3, textAlign: 'center', padding: '16px 0' }}>Belum ada data</p>}
                 </div>
               </div>
-
-              <div className="glass p-6 rounded-2xl">
-                <div className="flex items-center justify-between mb-4 gap-3">
+              <div style={{ ...card, padding: '18px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px', gap: '8px', flexWrap: 'wrap' }}>
                   <div>
-                    <h3 className="text-lg font-display font-bold text-white">Yang belum bayar</h3>
-                    <p className="text-xs text-white/40 mt-0.5">{monthNames[selectedMonth - 1]} {selectedYear}</p>
+                    <p style={{ fontWeight: 800, fontSize: '14px', color: T.text1, margin: 0 }}>Belum Bayar</p>
+                    <p style={{ fontSize: '11px', color: T.text3, margin: '2px 0 0' }}>{monthNames[selectedMonth - 1]} {selectedYear}</p>
                   </div>
-                  <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-accent">
-                    {monthNames.map((month, index) => (
-                      <option key={index} value={index + 1} className="bg-dark-secondary">{month}</option>
-                    ))}
+                  <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
+                    style={{ ...input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
+                    {monthNames.map((m, i) => <option key={i} value={i + 1} style={{ background: T.bg2 }}>{m}</option>)}
                   </select>
                 </div>
-                <div className="space-y-3 max-h-96 overflow-auto">
-                  {unpaidStudents.length > 0 ? (
-                    unpaidStudents.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                        <span className="text-white text-sm">{student.name}</span>
-                        <span className="px-2.5 py-1 bg-red-500/20 border border-red-500/40 text-red-300 text-xs rounded-full">❌ Unpaid</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+                  {unpaidStudents.length > 0
+                    ? unpaidStudents.map(s => (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: '9px', background: T.bg3 }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: T.text1 }}>{s.name}</span>
+                        <span style={{ padding: '2px 10px', background: T.redD, border: `1px solid ${T.redBdr}`, color: T.red, borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>Belum</span>
                       </div>
                     ))
-                  ) : (
-                    <p className="text-white/40 text-sm text-center py-6">Semua siswa sudah bayar ✅</p>
-                  )}
+                    : <p style={{ fontSize: '12px', color: T.text3, textAlign: 'center', padding: '16px 0' }}>Semua sudah bayar ✅</p>}
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
 
         {/* ── EXPENSES ── */}
         {activeTab === 'expenses' && (
-          <motion.div variants={itemVariants}>
-            <div className="glass p-6 rounded-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-display font-bold text-white">All Expenses</h2>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          <motion.div variants={iV}>
+            <div style={{ ...card, padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 900, color: T.text1, margin: 0 }}>Pengeluaran</h2>
+                  <p style={{ fontSize: '12px', color: T.text3, margin: '4px 0 0' }}>
+                    {filteredExp.length} transaksi &bull; <span style={{ color: T.orange, fontWeight: 700 }}>−Rp {totalExpense.toLocaleString('id-ID')}</span>
+                  </p>
+                </div>
+                <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                   onClick={() => setShowExpenseForm(true)}
-                  className="px-4 py-2 bg-accent text-dark-primary font-bold rounded-lg hover:shadow-lg transition-shadow">
-                  + Add Expense
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '9px', background: T.orange, border: 'none', color: '#000', fontWeight: 800, fontSize: '13px', cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>
+                  <Plus size={15} /> Tambah
                 </motion.button>
               </div>
-              <div className="space-y-3 max-h-[600px] overflow-auto">
-                {expenses.map((expense) => (
-                  <motion.div key={expense.id} whileHover={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-                    onClick={() => setSelectedExpense(expense)}
-                    className="flex items-center justify-between p-4 rounded-lg bg-white/5 transition-colors cursor-pointer">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">{expense.name}</p>
-                      <p className="text-xs text-white/50 truncate">{expense.description}</p>
-                      {expense.category && (
-                        <span className="inline-block mt-1 px-2 py-0.5 bg-accent/10 border border-accent/20 text-accent text-xs rounded-full">
-                          {expense.category}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-accent font-bold mx-4 shrink-0">-Rp {expense.amount.toLocaleString('id-ID')}</p>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense.id) }}
-                      className="p-2 hover:bg-red-500/20 rounded-lg transition-colors shrink-0">
-                      <Trash2 size={18} className="text-white/60" />
-                    </button>
-                  </motion.div>
-                ))}
-                {expenses.length === 0 && <p className="text-white/40 text-sm text-center py-8">No expenses recorded yet.</p>}
+              <TableToolbar search={expSearch} onSearch={setExpSearch} rowsPerPage={expRows} onRowsPerPage={setExpRows} placeholder="Cari pengeluaran..." />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '560px', overflowY: 'auto' }}>
+                {isLoading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)
+                  : pagedExp.length > 0 ? pagedExp.map(e => <ExpenseRow key={e.id} expense={e} onClick={setSelectedExpense} onDelete={handleDeleteExpense} />)
+                  : <p style={{ fontSize: '13px', color: T.text3, textAlign: 'center', padding: '32px 0' }}>Tidak ada data.</p>}
               </div>
+              <Pagination page={expPage} total={totalExpPages} onPrev={() => setExpPage(p => p - 1)} onNext={() => setExpPage(p => p + 1)} />
             </div>
           </motion.div>
         )}
 
         {/* ── INCOME ── */}
         {activeTab === 'income' && (
-          <motion.div variants={itemVariants}>
-            <div className="glass p-6 rounded-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-display font-bold text-white">All Income</h2>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          <motion.div variants={iV}>
+            <div style={{ ...card, padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 900, color: T.text1, margin: 0 }}>Pemasukan</h2>
+                  <p style={{ fontSize: '12px', color: T.text3, margin: '4px 0 0' }}>
+                    {filteredInc.length} transaksi &bull; <span style={{ color: T.green, fontWeight: 700 }}>+Rp {totalIncome.toLocaleString('id-ID')}</span>
+                  </p>
+                </div>
+                <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                   onClick={() => setShowIncomeForm(true)}
-                  className="px-4 py-2 bg-accent text-dark-primary font-bold rounded-lg hover:shadow-lg transition-shadow">
-                  + Add Income
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '9px', background: T.green, border: 'none', color: '#000', fontWeight: 800, fontSize: '13px', cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>
+                  <Plus size={15} /> Tambah
                 </motion.button>
               </div>
-              <div className="space-y-3 max-h-[600px] overflow-auto">
-                {incomes.map((income) => (
-                  <motion.div key={income.id} whileHover={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-                    onClick={() => setSelectedIncome(income)}
-                    className="flex items-center justify-between p-4 rounded-lg bg-white/5 transition-colors cursor-pointer">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">{income.name}</p>
-                      <p className="text-xs text-white/50 truncate">{income.description}</p>
-                      {income.source && (
-                        <span className="inline-block mt-1 px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400 text-xs rounded-full">
-                          {income.source}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-green-500 font-bold mx-4 shrink-0">+Rp {income.amount.toLocaleString('id-ID')}</p>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteIncome(income.id) }}
-                      className="p-2 hover:bg-red-500/20 rounded-lg transition-colors shrink-0">
-                      <Trash2 size={18} className="text-white/60" />
-                    </button>
-                  </motion.div>
-                ))}
-                {incomes.length === 0 && <p className="text-white/40 text-sm text-center py-8">No income recorded yet.</p>}
+              <TableToolbar search={incSearch} onSearch={setIncSearch} rowsPerPage={incRows} onRowsPerPage={setIncRows} placeholder="Cari pemasukan..." />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '560px', overflowY: 'auto' }}>
+                {isLoading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} />)
+                  : pagedInc.length > 0 ? pagedInc.map(i => <IncomeRow key={i.id} income={i} onClick={setSelectedIncome} onDelete={handleDeleteIncome} />)
+                  : <p style={{ fontSize: '13px', color: T.text3, textAlign: 'center', padding: '32px 0' }}>Tidak ada data.</p>}
               </div>
+              <Pagination page={incPage} total={totalIncPages} onPrev={() => setIncPage(p => p - 1)} onNext={() => setIncPage(p => p + 1)} />
             </div>
           </motion.div>
         )}
 
         {/* ── PAYMENTS ── */}
         {activeTab === 'payments' && (
-          <motion.div variants={itemVariants} className="pb-28">
-            <StudentPaymentManager
-              onOpenMonthModal={handleOpenMonthModal}
-              onSelectionUpdate={handlePaymentSelectionUpdate}
-            />
+          <motion.div variants={iV} style={{ paddingBottom: '100px' }}>
+            <StudentPaymentManager onOpenMonthModal={handleOpenMonthModal} onSelectionUpdate={handlePaymentSelectionUpdate} />
           </motion.div>
         )}
+      </motion.div>
 
-        {/* ── MODALS ── */}
-        {showExpenseForm && <ExpenseForm onClose={() => setShowExpenseForm(false)} onSubmit={handleAddExpense} />}
-        {showIncomeForm  && <IncomeForm  onClose={() => setShowIncomeForm(false)}  onSubmit={handleAddIncome}  />}
-        {showNotifForm   && <SendNotificationModal onClose={() => setShowNotifForm(false)} />}
+      {/* ── Mobile Bottom Navigation ── */}
+      <div className="adm-bottom-nav">
+        {TABS.map(({ key, label, icon: Icon }) => {
+          const isActive = activeTab === key
+          const iconColor = isActive
+            ? key === 'income'   ? T.green
+            : key === 'expenses' ? T.orange
+            : key === 'payments' ? T.blue
+            : T.orange
+            : T.text3
 
-        {selectedExpense && (
-          <ExpenseDetailModal expense={selectedExpense} onClose={() => setSelectedExpense(null)} onUpdate={handleUpdateExpense} />
-        )}
-        {selectedIncome && (
-          <IncomeDetailModal income={selectedIncome} onClose={() => setSelectedIncome(null)} onUpdate={handleUpdateIncome} />
-        )}
+          return (
+            <motion.button
+              key={key}
+              whileTap={{ scale: 0.86 }}
+              onClick={() => setActiveTab(key)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', gap: '5px', padding: '10px 4px 6px',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif", position: 'relative',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <AnimatePresence>
+                {isActive && (
+                  <motion.div
+                    layoutId="adm-nav-indicator"
+                    initial={{ opacity: 0, scaleX: 0 }}
+                    animate={{ opacity: 1, scaleX: 1 }}
+                    exit={{ opacity: 0, scaleX: 0 }}
+                    style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '28px', height: '2px', borderRadius: '0 0 4px 4px', background: iconColor }}
+                  />
+                )}
+              </AnimatePresence>
+              <motion.div
+                animate={{ background: isActive ? `${iconColor}18` : 'transparent', scale: isActive ? 1 : 0.9 }}
+                transition={{ duration: 0.2 }}
+                style={{ padding: '6px 12px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Icon size={20} color={iconColor} strokeWidth={isActive ? 2.5 : 1.8} />
+              </motion.div>
+              <span style={{ fontSize: '10px', fontWeight: isActive ? 800 : 500, color: iconColor, transition: 'color 0.2s', letterSpacing: '0.1px' }}>
+                {label}
+              </span>
+            </motion.button>
+          )
+        })}
+      </div>
 
+      {/* ── Floating action add buttons (mobile) ── */}
+
+      {/* ── Modals ── */}
+      {showExpenseForm && <ExpenseForm onClose={() => setShowExpenseForm(false)} onSubmit={handleAddExpense} />}
+      {showIncomeForm  && <IncomeForm  onClose={() => setShowIncomeForm(false)}  onSubmit={handleAddIncome}  />}
+      {showNotifForm   && <SendNotificationModal onClose={() => setShowNotifForm(false)} />}
+
+      {selectedExpense && <ExpenseDetailModal expense={selectedExpense} onClose={() => setSelectedExpense(null)} onUpdate={handleUpdateExpense} />}
+      {selectedIncome  && <IncomeDetailModal  income={selectedIncome}   onClose={() => setSelectedIncome(null)}  onUpdate={handleUpdateIncome}  />}
+
+      {/* Payment selection bar */}
+      <AnimatePresence>
         {activeTab === 'payments' && paymentSelection.selectedCount > 0 && (
-          <div className="fixed inset-x-0 bottom-0 z-50 bg-dark-secondary/95 backdrop-blur-md border-t border-accent/30 shadow-2xl px-4 py-3 sm:px-6">
-            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <motion.div
+            initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
+            style={{
+              position: 'fixed', inset: '0 0 auto', bottom: 0, zIndex: 50,
+              background: 'rgba(20,20,20,0.97)', borderTop: `1px solid ${T.orangeBdr}`,
+              backdropFilter: 'blur(16px)', padding: '14px 20px', paddingBottom: 'env(safe-area-inset-bottom, 14px)',
+            }}
+          >
+            <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <div>
-                <p className="text-sm font-semibold text-white">
-                  {paymentSelection.selectedCount} student{paymentSelection.selectedCount !== 1 ? 's' : ''} selected
+                <p style={{ fontSize: '13px', fontWeight: 700, color: T.text1, margin: 0 }}>
+                  {paymentSelection.selectedCount} student dipilih
                 </p>
-                <p className="text-xs text-white/60 mt-1">
-                  {paymentSelection.pendingPaid} akan Bayar, {paymentSelection.pendingUnpaid} akan Belum Bayar
+                <p style={{ fontSize: '11px', color: T.text3, margin: '2px 0 0' }}>
+                  {paymentSelection.pendingPaid} akan bayar, {paymentSelection.pendingUnpaid} akan batal
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <button onClick={handlePaymentCancel}
-                  className="w-full sm:w-auto px-4 py-2 glass text-white font-semibold rounded-lg hover:bg-white/20 transition-colors">
-                  Cancel
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => paymentSelection.cancelChanges?.()}
+                  style={{ padding: '9px 18px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '13px' }}>
+                  Batal
                 </button>
-                <button onClick={handlePaymentSave} disabled={paymentSelection.isSaving}
-                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-accent to-accent-light text-dark-primary font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50">
-                  {paymentSelection.isSaving ? 'Saving...' : 'Save Changes'}
+                <button onClick={() => paymentSelection.saveChanges?.()} disabled={paymentSelection.isSaving}
+                  style={{ padding: '9px 18px', borderRadius: '8px', background: T.orange, border: 'none', color: '#000', cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '13px', opacity: paymentSelection.isSaving ? 0.6 : 1 }}>
+                  {paymentSelection.isSaving ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* ── MONTH SELECTION MODAL ── */}
-        <AnimatePresence>
-          {showMonthModal && (
-            <>
-              <motion.div key="month-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setShowMonthModal(false)} className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
-              <motion.div key="month-modal"
-                initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }} transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-                <div className="pointer-events-auto w-full max-w-lg glass rounded-2xl border border-white/10 overflow-hidden"
-                  onClick={(e) => e.stopPropagation()}>
-                  <div className="relative flex items-center justify-between p-5 border-b border-white/10">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent-light" />
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-accent/20">
-                        <Check size={20} className="text-accent" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-display font-bold text-white">Detail Bulan Pembayaran</h2>
-                        <p className="text-xs text-white/40 mt-0.5">
-                          {selectedPaymentStudent?.name || 'Student'} - {new Date().getFullYear()}
-                        </p>
-                      </div>
+      {/* Month Modal */}
+      <AnimatePresence>
+        {showMonthModal && (
+          <>
+            <motion.div key="mm-bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowMonthModal(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)' }} />
+            <motion.div key="mm-md" initial={{ opacity: 0, scale: 0.93, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 24 }} transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', pointerEvents: 'none' }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{ pointerEvents: 'auto', width: '100%', maxWidth: '500px', background: T.bg2, border: `1px solid ${T.border}`, borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', padding: '18px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: T.orange }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ padding: '8px', background: T.orangeD, borderRadius: '9px' }}>
+                      <Check size={18} color={T.orange} />
                     </div>
-                    <button type="button" onClick={() => setShowMonthModal(false)}
-                      className="w-9 h-9 rounded-full bg-white/5 hover:bg-red-500/20 border border-white/10 flex items-center justify-center text-white transition-colors flex-shrink-0">
-                      ✕
-                    </button>
+                    <div>
+                      <p style={{ fontWeight: 800, fontSize: '15px', color: T.text1, margin: 0 }}>Detail Pembayaran</p>
+                      <p style={{ fontSize: '11px', color: T.text3, margin: '2px 0 0' }}>{selectedPaymentStudent?.name} — {new Date().getFullYear()}</p>
+                    </div>
                   </div>
-                  <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-                    <p className="text-sm text-white/50">
-                      Klik bulan untuk memilih pembayaran yang ingin disetujui. Bulan yang sudah dibayar tidak dapat diubah.
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {monthNames.map((month, idx) => {
-                        const monthIndex = idx + 1
-                        const paid       = Boolean(studentMonthStatus[monthIndex])
-                        const selected   = selectedMonths.has(monthIndex)
+                  <button onClick={() => setShowMonthModal(false)}
+                    style={{ padding: '7px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, cursor: 'pointer', display: 'flex' }}>
+                    <X size={15} color={T.text2} />
+                  </button>
+                </div>
+                <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <p style={{ fontSize: '12px', color: T.text3, margin: 0, lineHeight: 1.6 }}>
+                    Pilih bulan yang ingin disetujui. Bulan yang sudah dibayar tidak dapat diubah.
+                  </p>
+                  {isMonthModalLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                      <Loader2 size={20} color={T.orange} style={{ animation: 'spin 1s linear infinite' }} />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      {monthNames.map((m, idx) => {
+                        const mn       = idx + 1
+                        const paid     = Boolean(studentMonthStatus[mn])
+                        const selected = selectedMonths.has(mn)
                         return (
-                          <button key={month} type="button" onClick={() => handleToggleMonth(monthIndex)} disabled={paid}
-                            className={`rounded-2xl border px-4 py-3 text-left font-medium transition-all ${
-                              paid     ? 'bg-slate-700 text-white border-black cursor-not-allowed'
-                              : selected ? 'bg-orange-500 text-white border-black'
-                              : 'bg-white/5 text-white border-white/10 hover:bg-white/10'
-                            }`}>
-                            <div className="flex items-center justify-between gap-2">
-                              <span>{month}</span>
-                              {paid ? <Check size={16} className="text-white" /> : selected ? <span className="text-white">✓</span> : null}
-                            </div>
+                          <button key={m} onClick={() => handleToggleMonth(mn)} disabled={paid}
+                            style={{
+                              padding: '12px 10px', borderRadius: '10px', border: `1px solid ${paid ? 'transparent' : selected ? T.orange : T.border}`,
+                              background: paid ? T.bg3 : selected ? T.orangeD : T.bg3,
+                              color: paid ? T.text3 : selected ? T.orange : T.text2,
+                              cursor: paid ? 'not-allowed' : 'pointer',
+                              fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '12px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', transition: 'all 0.15s',
+                            }}>
+                            <span>{m}</span>
+                            {paid ? <Check size={13} color={T.green} /> : selected ? <span style={{ color: T.orange }}>✓</span> : null}
                           </button>
                         )
                       })}
                     </div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
-                      <p className="text-sm text-white/60">
-                        {isMonthModalLoading ? 'Loading month status...'
-                          : selectedMonths.size > 0 ? `${selectedMonths.size} bulan dipilih untuk approve.`
-                          : 'Pilih bulan untuk disetujui.'}
-                      </p>
-                      <div className="flex gap-3">
-                        <button type="button" onClick={() => setShowMonthModal(false)}
-                          className="px-5 py-3 glass text-white rounded-lg hover:bg-white/10 transition-colors">
-                          Tutup
-                        </button>
-                        <button type="button" onClick={handleSaveMonthSelection}
-                          disabled={selectedMonths.size === 0 || isSavingMonths}
-                          className="px-5 py-3 bg-gradient-to-r from-accent to-accent-light text-dark-primary font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50">
-                          {isSavingMonths ? 'Saving...' : 'Approve Selected'}
-                        </button>
-                      </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                    <p style={{ fontSize: '12px', color: T.text3, margin: 0 }}>
+                      {selectedMonths.size > 0 ? `${selectedMonths.size} bulan dipilih` : 'Pilih bulan untuk disetujui'}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => setShowMonthModal(false)}
+                        style={{ padding: '9px 18px', borderRadius: '8px', background: T.bg3, border: `1px solid ${T.border}`, color: T.text2, cursor: 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '13px' }}>
+                        Tutup
+                      </button>
+                      <button onClick={handleSaveMonthSelection} disabled={selectedMonths.size === 0 || isSavingMonths}
+                        style={{ padding: '9px 18px', borderRadius: '8px', background: T.orange, border: 'none', color: '#000', cursor: selectedMonths.size === 0 || isSavingMonths ? 'not-allowed' : 'pointer', fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '13px', opacity: selectedMonths.size === 0 || isSavingMonths ? 0.5 : 1 }}>
+                        {isSavingMonths ? 'Menyimpan...' : 'Approve'}
+                      </button>
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </motion.div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; }
+
+        @keyframes spin  { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100%{opacity:.3}50%{opacity:.65} }
+        @keyframes ping  { 0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.8);opacity:0} }
+
+        .adm-ping {
+          position: absolute; inset: 0; border-radius: 50%;
+          background: ${T.green}; opacity: .7;
+          animation: ping 1.6s ease-in-out infinite;
+        }
+
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 4px; }
+
+        .adm-header {
+          max-width: 1280px; margin: 0 auto; padding: 13px 16px;
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        }
+
+        .adm-stat-grid   { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .adm-action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .adm-recent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+        .adm-tabs-row { -ms-overflow-style: none; scrollbar-width: none; }
+        .adm-tabs-row::-webkit-scrollbar { display: none; }
+
+        /* Bottom nav hidden on desktop */
+        .adm-bottom-nav { display: none; }
+
+        @media (max-width: 768px) {
+          .adm-stat-grid   { grid-template-columns: 1fr; }
+          .adm-action-grid { grid-template-columns: 1fr; }
+          .adm-recent-grid { grid-template-columns: 1fr; }
+          .adm-notif-label { display: none; }
+          .adm-logout-label { display: none; }
+          .adm-last-updated { display: none; }
+          .adm-refresh-label { display: none; }
+
+          /* Hide desktop tabs */
+          .adm-tabs-row { display: none !important; }
+
+          /* Pad content above bottom nav */
+          .adm-content { padding-bottom: 90px !important; }
+
+          /* Show bottom nav */
+          .adm-bottom-nav {
+            display: flex;
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+            background: rgba(12,12,12,0.97);
+            border-top: 1px solid ${T.border};
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .adm-header { padding: 11px 14px; }
+        }
+      `}</style>
     </div>
   )
 }
